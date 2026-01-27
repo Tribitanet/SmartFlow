@@ -1,46 +1,52 @@
 package main
 
 import (
+	//базовые
 	"bufio"
-	"context"
 	"fmt"
 	"log"
 	"os"
 
+	//переменные окружения
 	"github.com/joho/godotenv"
+
+	//openAI SDK
 	"github.com/openai/openai-go/v2"
 	"github.com/openai/openai-go/v2/option"
+
+	//контекст
+	"context"
 )
 
 func main() {
-	if err := godotenv.Load(); err != nil {
-		log.Println("No .env file found")
+	if err := godotenv.Load("../.env"); err != nil {
+		log.Println("Read .env error")
 	}
 
-	apiKey := os.Getenv("OPEN_ROUTER_API_KEY")
+	apiKey := os.Getenv("OPEN_ROUTER_API_KEY_STOP_THEMES")
 
 	if apiKey == "" {
 		log.Println("API key is required")
 	}
 
-	ctx := context.Background()
-
 	url := "https://openrouter.ai/api/v1"
+
+	ctx := context.Background()
 
 	client := openai.NewClient(
 		option.WithBaseURL(url),
 		option.WithAPIKey(apiKey),
 	)
 
-	jsonData, err := os.ReadFile("topics.json")
+	jsonData, err := os.ReadFile("stopTopics.json")
 	if err != nil {
-		log.Fatalf("Ошибка чтения файла тем: %v", err)
+		log.Fatalf("Ошибка чтения файла стоп-тем: %v", err)
 	}
 
-	systemPrompt := fmt.Sprintf("Ты — классификатор. Твоя задача — вернуть JSON объект, где ключи — это темы из списка: %s. Значения — true/false. ОТВЕЧАЙ ТОЛЬКО ВАЛИДНЫМ JSON. Никакого markdown, никаких пояснений.", string(jsonData))
+	systemPropmt := fmt.Sprintf("Ты — фильтратор. Твоя задача — вернуть JSON объект, где ключи — это стоп-темы из списка: %s. Значения — true/false. true - проходит эту стоп-тему, false - не проходит. ОТВЕЧАЙ ТОЛЬКО ВАЛИДНЫМ JSON. Никакого markdown, никаких пояснений.", string(jsonData))
 
 	messages := []openai.ChatCompletionMessageParamUnion{
-		openai.SystemMessage(systemPrompt),
+		openai.SystemMessage(systemPropmt),
 	}
 
 	model := "meta-llama/llama-3.3-70b-instruct:free"
@@ -83,9 +89,11 @@ func main() {
 		}
 
 		output := res.Choices[0].Message.Content
-		fmt.Print("\n\n")
+		fmt.Println()
 		fmt.Println(output)
 
 		params.Messages = append(params.Messages, openai.AssistantMessage(output))
+
 	}
+
 }
