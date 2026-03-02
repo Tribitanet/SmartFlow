@@ -1,0 +1,54 @@
+### 1. Создание пользователя (с темами и стоп-темами)
+POST http://localhost:8080/users/create-user
+Content-Type: application/json
+
+{
+    "username": "DemoUser",
+    "password": "password123",
+    "email": "demo@example.com",
+    "Topics": [
+        {"Name": "Экономика"},
+        {"Name": "Технологии и Наука"},
+        {"Name": "Политика"},
+        {"Name": "Спорт"},
+        {"Name": "Культура"},
+        {"Name": "Происшествия"}
+    ],
+    "StopThemes": [
+        {"Name": "Повышение налогов"},
+        {"Name": "Азартные игры/казино/ставки"},
+        {"Name": "Микрозаймы/МФО"}
+    ]
+}
+
+### 2. Получение пользователя по ID (ID=1, если это первый пользователь)
+GET http://localhost:8080/users/get-user?id=1
+
+### 3. Обновление данных пользователя (меняем email)
+PUT http://localhost:8080/users/update-user?id=1
+Content-Type: application/json
+
+{
+    "email": "new_email@example.com"
+}
+
+### 4. Проверка обновления (получаем пользователя снова)
+GET http://localhost:8080/users/get-user?id=1
+
+### 5. Получение списка тем (Topics)
+# Должен вернуть список тем, созданных вместе с пользователем
+GET http://localhost:8080/fields/topics
+
+### 6. Получение списка стоп-тем (Stop Themes)
+# Должен вернуть список стоп-тем, созданных вместе с пользователем
+GET http://localhost:8080/fields/stop-themes
+
+### 7. Получение списка каналов (Channels)
+# Вернет пустой список [], если в базе нет записей
+GET http://localhost:8080/fields/channels
+
+### 8. Удаление пользователя
+DELETE http://localhost:8080/users/delete-user?id=1
+
+### 9. Проверка удаления (должен вернуть 404 Not Found)
+GET http://localhost:8080/users/get-user?id=1

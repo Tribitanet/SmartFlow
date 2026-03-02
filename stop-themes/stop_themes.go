@@ -49,7 +49,7 @@ func main() {
 		openai.SystemMessage(systemPropmt),
 	}
 
-	model := "meta-llama/llama-3.3-70b-instruct:free"
+	model := "openai/gpt-oss-120b:free"
 
 	params := openai.ChatCompletionNewParams{
 		Model:    model,
@@ -86,6 +86,7 @@ func main() {
 		res, err := client.Chat.Completions.New(ctx, params)
 		if err != nil {
 			log.Println(err)
+			continue
 		}
 
 		output := res.Choices[0].Message.Content

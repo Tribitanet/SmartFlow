@@ -4,8 +4,8 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"smartFlow/DB"
-	"smartFlow/Models"
+	database "smartFlow/DB"
+	models "smartFlow/Models"
 	"smartFlow/pkg/handler"
 	"smartFlow/server"
 )
@@ -39,7 +39,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	handlers := new(handler.Handler)
+	handlers := &handler.Handler{
+		DB: db,
+	}
 	srv := new(server.Server)
 	if err := srv.Run("8080", handlers.InitRoutes()); err != nil {
 		fmt.Println(err)
