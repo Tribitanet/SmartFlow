@@ -20,6 +20,7 @@ type Channel struct {
 
 type News struct {
 	ID          uint         `gorm:"primarykey"`
+	Body        string       `gorm:"not null"`
 	MessageLink string       `gorm:"not null"`
 	ChannelID   uint         `gorm:"not null"`
 	Topics      []*Topic     `gorm:"many2many:news_topics;"`

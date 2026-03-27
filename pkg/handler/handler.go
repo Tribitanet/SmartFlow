@@ -20,13 +20,18 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		users.PUT("/update-user", h.updateUser)
 	}
 
+	news := router.Group("/news")
+	{
+		news.POST("/create-news", h.createNews)
+		
+	}
+
 	fields := router.Group("/fields")
 	{
 		fields.GET("/stop-themes", h.getStopThemes)
 		fields.GET("/topics", h.getTopics)
 		fields.GET("/channels", h.getChannels)
 	}
-
 
 	return router
 }

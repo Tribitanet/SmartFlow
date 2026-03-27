@@ -1,0 +1,3 @@
+docker/qdrant_storage/
+
+.env
