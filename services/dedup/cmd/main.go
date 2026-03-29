@@ -7,7 +7,7 @@ import (
 	"log"
 	"os"
 
-	embedding "smartFlow/deduplicate/pkg"
+	embedding "smartFlow/services/dedup/internal/embedding"
 
 	"github.com/qdrant/go-client/qdrant"
 )
@@ -73,5 +73,6 @@ func main() {
 			Points:         []*qdrant.PointStruct{point},
 		})
 		id++
+
 	}
 }

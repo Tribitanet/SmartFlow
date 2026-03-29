@@ -46,4 +46,3 @@ func GetDSN() string {
 	}
 	return fmt.Sprintf("postgres://%s:%s@127.0.0.1:5432/%s?sslmode=disable", user, pass, user)
 }
-

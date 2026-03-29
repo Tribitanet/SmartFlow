@@ -4,10 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	database "smartFlow/DB"
-	models "smartFlow/Models"
-	"smartFlow/pkg/handler"
-	"smartFlow/server"
+	database "smartFlow/services/api/internal/database"
+	models "smartFlow/internal/models"
+	"smartFlow/services/api/internal/handler"
+	"smartFlow/services/api/internal/server"
 )
 
 func main() {

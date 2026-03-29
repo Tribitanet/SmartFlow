@@ -23,7 +23,6 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	news := router.Group("/news")
 	{
 		news.POST("/create-news", h.createNews)
-		
 	}
 
 	fields := router.Group("/fields")

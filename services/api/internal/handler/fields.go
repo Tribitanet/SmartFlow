@@ -2,7 +2,7 @@ package handler
 
 import (
 	"net/http"
-	"smartFlow/Models"
+	"smartFlow/internal/models"
 
 	"github.com/gin-gonic/gin"
 )

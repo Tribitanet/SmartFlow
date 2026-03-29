@@ -22,19 +22,21 @@ type jinaResponse struct {
 	} `json:"data"`
 }
 
-func GetEmbedding(text string) ([]float32, error) {
-	err := godotenv.Load("../../.env")
+var apiKey string
+
+func init() {
+	err := godotenv.Load("../../../.env")
 	if err != nil {
 		log.Fatal("Read .env error:", err)
-		return nil, err
 	}
 
 	apiKey := os.Getenv("JINA_API_KEY")
 	if apiKey == "" {
 		log.Fatal("JINA_API_KEY not set in .env")
-		return nil, err
 	}
+}
 
+func GetEmbedding(text string) ([]float32, error) {
 	requestBody, err := json.Marshal(jinaRequest{
 		Model: "jina-embeddings-v3",
 		Input: []string{text},
@@ -72,7 +74,8 @@ func GetEmbedding(text string) ([]float32, error) {
 	}
 
 	var jinaResp jinaResponse
-	if err := json.Unmarshal(body, &jinaResp); err != nil {
+	if err := json.Unmarshal(body, &jinaResp)
+	err != nil {
 		log.Fatal("Unmarshal error:", err)
 		return nil, err
 	}
