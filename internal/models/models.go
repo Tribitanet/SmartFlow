@@ -11,7 +11,7 @@ type User struct {
 }
 
 type Channel struct {
-	ID    uint    `gorm:"primarykey"`
+	ID    uint    `gorm:"primarykey;autoIncrement:true"`
 	Link  string  `gorm:"not null"`
 	Name  string  `gorm:"not null"`
 	Users []*User `gorm:"many2many:user_channels;"`
@@ -19,7 +19,7 @@ type Channel struct {
 }
 
 type News struct {
-	ID          uint         `gorm:"primarykey"`
+	ID          uint         `gorm:"primarykey;autoIncrement:true"`
 	Body        string       `gorm:"not null"`
 	MessageLink string       `gorm:"not null"`
 	ChannelID   uint         `gorm:"not null"`
@@ -30,13 +30,13 @@ type News struct {
 }
 
 type Topic struct {
-	ID   uint    `gorm:"primarykey"`
+	ID   uint    `gorm:"primarykey;autoIncrement:true"`
 	Name string  `gorm:"not null"`
 	News []*News `gorm:"many2many:news_topics;"`
 }
 
 type StopTheme struct {
-	ID   uint    `gorm:"primarykey"`
+	ID   uint    `gorm:"primarykey;autoIncrement:true"`
 	Name string  `gorm:"not null"`
 	News []*News `gorm:"many2many:news_stop_themes;"`
 }

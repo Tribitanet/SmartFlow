@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bufio"
 	"context"
 	"fmt"
 	"log"
@@ -9,8 +8,8 @@ import (
 
 	"smartFlow/internal/database"
 	"smartFlow/internal/models"
-	"smartFlow/services/cron/internal/deduplicate/embedding"
 	"smartFlow/services/cron/internal/deduplicate/vectordb"
+	"smartFlow/services/cron/internal/deduplicate/deduplicate"
 
 	"github.com/qdrant/go-client/qdrant"
 )
@@ -71,44 +70,5 @@ func main() {
 		os.Exit(1)
 	}
 
-	scanner := bufio.NewScanner(os.Stdin)
-	var id uint64 = 1
-	for {
-		fmt.Println("Вставьте текст новости:")
-		fmt.Print("> ")
-
-		if !scanner.Scan() {
-			break
-		}
-
-		input := scanner.Text()
-		if input == "exit" {
-			fmt.Print("goodbye")
-			break
-		}
-		if input == "" {
-			continue
-		}
-		if input == "clear" {
-			fmt.Print("\033[H\033[2J")
-		}
-
-		embedding, err := embedding.GetEmbedding(input)
-		if err != nil {
-			log.Fatal("Embedding: ", err)
-		}
-		fmt.Println("Embedding: ", embedding)
-
-		point := &qdrant.PointStruct{
-			Id:      qdrant.NewIDNum(id),
-			Vectors: qdrant.NewVectors(embedding...),
-		}
-
-		client.Upsert(ctx, &qdrant.UpsertPoints{
-			CollectionName: "news",
-			Points:         []*qdrant.PointStruct{point},
-		})
-		id++
-
-	}
+	deduplicate.CronDeduplicateTask(db, client, ctx)
 }

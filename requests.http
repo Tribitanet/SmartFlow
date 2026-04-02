@@ -54,3 +54,77 @@ DELETE http://localhost:8080/users/delete-user?id=1
 GET http://localhost:8080/users/get-user?id=1
 
 
+
+### --- ТЕСТИРОВАНИЕ ДЕДУПЛИКАЦИИ НОВОСТЕЙ ---
+
+### 9.5 Создание канала (ОБЯЗАТЕЛЬНО ВЫПОЛНИТЬ ПЕРЕД СОЗДАНИЕМ НОВОСТЕЙ, ЧТОБЫ БЫЛ ID=1)
+POST http://localhost:8080/channels/create-channel
+Content-Type: application/json
+
+{
+    "Link": "https://t.me/test_channel",
+    "Name": "Тестовый Канал"
+}
+
+### 10. Оригинальная новость (Космос)
+POST http://localhost:8080/news/create-news
+Content-Type: application/json
+
+{
+    "Body": "Компания SpaceX Илона Маска успешно запустила тяжелую ракету Falcon Heavy, которая вывела на орбиту Земли новую партию интернет-спутников Starlink.",
+    "MessageLink": "https://t.me/space/1",
+    "ChannelID": 1
+}
+
+### 11. ДУБЛИКАТ к новости 10 (переписано другими словами)
+POST http://localhost:8080/news/create-news
+Content-Type: application/json
+
+{
+    "Body": "Очередная партия спутников Starlink выведена на околоземную орбиту с помощью ракетоносителя Falcon Heavy от корпорации SpaceX.",
+    "MessageLink": "https://t.me/tech/22",
+    "ChannelID": 1
+}
+
+### 12. ДУБЛИКАТ к новости 10 (ещё один рерайт)
+POST http://localhost:8080/news/create-news
+Content-Type: application/json
+
+{
+    "Body": "Тяжелая ракета Falcon Heavy успешно стартовала сегодня утром. SpaceX доставила на орбиту Земли новые телекоммуникационные спутники Starlink Илона Маска.",
+    "MessageLink": "https://t.me/news/333",
+    "ChannelID": 1
+}
+
+### 13. Отдельная новость (Экономика) - НЕ дубликат космоса
+POST http://localhost:8080/news/create-news
+Content-Type: application/json
+
+{
+    "Body": "Центральный Банк принял решение повысить ключевую ставку сразу на 2 процента на фоне растущей инфляции в стране.",
+    "MessageLink": "https://t.me/finance/44",
+    "ChannelID": 1
+}
+
+### 14. ДУБЛИКАТ к новости 13 (Экономика)
+POST http://localhost:8080/news/create-news
+Content-Type: application/json
+
+{
+    "Body": "Из-за ускоряющейся инфляции регулятор (ЦБ) вынужденно увеличил ставку рефинансирования на 200 базисных пунктов (2%).",
+    "MessageLink": "https://t.me/bank/55",
+    "ChannelID": 1
+}
+
+### 15. Проверка "похожей" темы, но НЕ дубликата
+### (Участвует Илон Маск, но контекст другой - должно получить Score ниже 0.85 от первых новостей)
+POST http://localhost:8080/news/create-news
+Content-Type: application/json
+
+{
+    "Body": "Илон Маск представил новую бюджетную модель электромобиля Tesla Model 2 стоимостью около 25 тысяч долларов.",
+    "MessageLink": "https://t.me/auto/66",
+    "ChannelID": 1
+}
+### 16. Очистка таблицы новостей
+DELETE http://localhost:8080/news/delete-all-news

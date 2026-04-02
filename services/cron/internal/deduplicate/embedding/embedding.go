@@ -25,12 +25,25 @@ type jinaResponse struct {
 var apiKey string
 
 func init() {
-	err := godotenv.Load("../../../.env")
-	if err != nil {
-		log.Fatal("Read .env error:", err)
+	envPath := []string{
+		"../../../.env",
+		"../../../../../.env",
+		".env",
 	}
 
-	apiKey := os.Getenv("JINA_API_KEY")
+	var loaded bool
+	for _, path := range envPath {
+		if err := godotenv.Load(path); err == nil {
+			loaded = true
+			break
+		}
+	}
+
+	if !loaded {
+		log.Fatal("Не удалось найти .env файл")
+	}
+
+	apiKey = os.Getenv("JINA_API_KEY")
 	if apiKey == "" {
 		log.Fatal("JINA_API_KEY not set in .env")
 	}
@@ -74,8 +87,7 @@ func GetEmbedding(text string) ([]float32, error) {
 	}
 
 	var jinaResp jinaResponse
-	if err := json.Unmarshal(body, &jinaResp)
-	err != nil {
+	if err := json.Unmarshal(body, &jinaResp); err != nil {
 		log.Fatal("Unmarshal error:", err)
 		return nil, err
 	}

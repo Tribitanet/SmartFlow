@@ -53,7 +53,7 @@ func getQdrantPoints(news []SimpleNews) ([]*qdrant.PointStruct, error) {
 	return points, nil
 }
 
-func AddDuplicate(db *gorm.DB, a, b uint) error {
+func addDuplicate(db *gorm.DB, a, b uint) error {
 	var newsA, newsB models.News
 
 	err := db.First(&newsA, a).Error
@@ -101,7 +101,7 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 			CollectionName: "news",
 			Positive: []*qdrant.PointId{point.Id},
 			Limit: 100,
-			ScoreThreshold: qdrant.PtrOf(float32(0.85)),
+			ScoreThreshold: qdrant.PtrOf(float32(0.79)),
 		})
 		if err != nil {
 			log.Fatal(err)
@@ -109,7 +109,7 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 
 		similarPoints := response.GetResult()
 		for _, simPoint := range similarPoints {
-			AddDuplicate(db, uint(simPoint.Id.GetNum()), uint(point.Id.GetNum()))
+			addDuplicate(db, uint(simPoint.Id.GetNum()), uint(point.Id.GetNum()))
 		}
 	}
 }

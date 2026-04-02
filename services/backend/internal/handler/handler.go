@@ -23,6 +23,13 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	news := router.Group("/news")
 	{
 		news.POST("/create-news", h.createNews)
+		news.DELETE("/delete-news", h.deleteNews)
+		news.DELETE("/delete-all-news", h.deleteAllNews)
+	}
+
+	channels := router.Group("/channels")
+	{
+		channels.POST("/create-channel", h.createChannel)
 	}
 
 	fields := router.Group("/fields")
