@@ -52,3 +52,5 @@ DELETE http://localhost:8080/users/delete-user?id=1
 
 ### 9. Проверка удаления (должен вернуть 404 Not Found)
 GET http://localhost:8080/users/get-user?id=1
+
+

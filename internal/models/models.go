@@ -26,6 +26,7 @@ type News struct {
 	Topics      []*Topic     `gorm:"many2many:news_topics;"`
 	StopThemes  []*StopTheme `gorm:"many2many:news_stop_themes;"`
 	Channel     Channel
+	Duplicates  []News `gorm:"many2many:news_duplicates;joinForeignKey:news_id;joinReferences:DuplicateID"`
 }
 
 type Topic struct {

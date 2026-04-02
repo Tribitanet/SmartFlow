@@ -1,4 +1,4 @@
-package server
+package datastore_server
 
 import (
 	"context"

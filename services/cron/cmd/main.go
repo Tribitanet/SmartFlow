@@ -7,12 +7,17 @@ import (
 	"log"
 	"os"
 
-	embedding "smartFlow/services/dedup/internal/embedding"
+	"smartFlow/internal/database"
+	"smartFlow/internal/models"
+	"smartFlow/services/cron/internal/deduplicate/embedding"
+	"smartFlow/services/cron/internal/deduplicate/vectordb"
 
 	"github.com/qdrant/go-client/qdrant"
 )
 
 func main() {
+
+	//поднимаем qdrant
 	config := qdrant.Config{
 		Host: "localhost",
 		Port: 6334,
@@ -25,15 +30,46 @@ func main() {
 
 	ctx := context.Background()
 
-	collection := qdrant.CreateCollection{
-		CollectionName: "news",
-		VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
-			Size:     1024,
-			Distance: qdrant.Distance_Cosine,
-		}),
+	exist, err := vectordb.CollectionExists("news")
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	_ = client.CreateCollection(ctx, &collection)
+	if exist {
+		fmt.Println("Коллекция уже существует")
+	} else {
+		collection := qdrant.CreateCollection{
+			CollectionName: "news",
+			VectorsConfig: qdrant.NewVectorsConfig(&qdrant.VectorParams{
+				Size:     1024,
+				Distance: qdrant.Distance_Cosine,
+			}),
+		}
+
+		err = client.CreateCollection(ctx, &collection)
+		if err != nil {
+			log.Fatal("Qdrant:", err)
+		}
+	}
+
+	//на всякий поднимаем БД
+	err = database.CheckDB()
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	db, err := database.Init(database.GetDSN())
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
+
+	err = db.AutoMigrate(&models.User{}, &models.News{}, &models.Topic{}, &models.StopTheme{})
+	if err != nil {
+		log.Fatal(err)
+		os.Exit(1)
+	}
 
 	scanner := bufio.NewScanner(os.Stdin)
 	var id uint64 = 1

@@ -3,25 +3,17 @@ package database
 import (
 	"fmt"
 	"os"
+
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-)
-
-var (
-	db *gorm.DB
 )
 
 func Init(dsn string) (*gorm.DB, error) {
 	return gorm.Open(postgres.Open(dsn), &gorm.Config{})
 }
 
-func GetDB() *gorm.DB {
-	return db
-}
-
 func CheckDB() error {
 	dsn := GetDSN()
-	fmt.Println(dsn)
 	db, err := Init(dsn)
 	if err != nil {
 		return err
