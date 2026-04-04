@@ -11,6 +11,7 @@ import (
 	"smartFlow/internal/models"
 	"smartFlow/services/cron/internal/deduplicate/deduplicate"
 	"smartFlow/services/cron/internal/deduplicate/vectordb"
+	"smartFlow/services/cron/internal/stopthemes"
 	"smartFlow/services/cron/internal/topics"
 
 	"github.com/go-co-op/gocron/v2"
@@ -94,6 +95,15 @@ func main() {
 	_, err = scheduler.NewJob(
 		gocron.DurationJob(10 * time.Second),
 		gocron.NewTask(topics.CronTopicsTask, db),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//Стоп-темы
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(10 * time.Second),
+		gocron.NewTask(stopthemes.CronStopThemesTask, db),
 	)
 	if err != nil {
 		log.Fatal(err)

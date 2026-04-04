@@ -85,14 +85,15 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Новости получены")
+	log.Printf("Новостей получено: %d", len(remainingNews))
 
 	points, err := getQdrantPoints(remainingNews)
 	if err != nil {
 		log.Fatal(err)
 	}
-	log.Println("Эмбеддинги получены")
+	log.Printf("Эмбеддинги получены: %d", len(points))
 
+	
 	for _, point := range points {
 		client.Upsert(ctx, &qdrant.UpsertPoints{
 			CollectionName: "news",

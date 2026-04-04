@@ -1,3 +1,37 @@
-docker/qdrant_storage/
-
+# === Секреты и переменные окружения ===
 .env
+.env.*
+!.env.example
+
+# === Go ===
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+
+# === IDE ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# === OS ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Docker (локальные данные) ===
+docker/qdrant_storage/
+docker/pg_data/
+
+# === Логи ===
+*.log
+
+# === Временные файлы ===
+tmp/
+*.tmp

@@ -3,16 +3,21 @@ package topics
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
+
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"smartFlow/internal/models"
+	"time"
 
 	"github.com/joho/godotenv"
 	"gorm.io/gorm"
 )
+
+var lastProcessedTime *time.Time
+
+const ScoreThreshold = 0.8
 
 type SimpleTopic struct {
 	ID   uint
@@ -90,9 +95,9 @@ func getIdByTopicName(topics []SimpleTopic, topicName string) uint {
 	return 0
 }
 
-func getNewsWithoutTopics(db *gorm.DB) ([]SimpleNews, error) {
+func getUnprocessedNews(db *gorm.DB) ([]SimpleNews, error) {
 	var news []models.News
-	err := db.Where("NOT EXISTS (SELECT 1 FROM news_topics WHERE news_topics.news_id = news.id)").Find(&news).Error
+	err := db.Where("topics_checked_at IS NULL").Find(&news).Error
 	if err != nil {
 		return nil, err
 	}
@@ -107,6 +112,40 @@ func getNewsWithoutTopics(db *gorm.DB) ([]SimpleNews, error) {
 	return simpleNews, nil
 }
 
+func getProcessedNews(db *gorm.DB) ([]SimpleNews, error) {
+	var news []models.News
+	err := db.Where("topics_checked_at IS NOT NULL").Find(&news).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var simpleNews []SimpleNews
+	for _, n := range news {
+		simpleNews = append(simpleNews, SimpleNews{
+			ID:   n.ID,
+			Body: n.Body,
+		})
+	}
+	return simpleNews, nil
+}
+
+func getNewTopics(db *gorm.DB, since time.Time) ([]SimpleTopic, error) {
+	var topics []models.Topic
+	err := db.Where("created_at > ?", since).Find(&topics).Error
+	if err != nil {
+		return nil, err
+	}
+
+	var simpleTopics []SimpleTopic
+	for _, t := range topics {
+		simpleTopics = append(simpleTopics, SimpleTopic{
+			ID:   t.ID,
+			Name: t.Name,
+		})
+	}
+	return simpleTopics, nil
+}
+
 func getAllTopics(db *gorm.DB) ([]SimpleTopic, error) {
 	var topics []models.Topic
 	err := db.Find(&topics).Error
@@ -119,6 +158,56 @@ func getAllTopics(db *gorm.DB) ([]SimpleTopic, error) {
 		})
 	}
 	return simpleTopics, err
+}
+
+func processNewsAgainstTopics(news []SimpleNews, topics []SimpleTopic, db *gorm.DB, isFullCheck bool) {
+	for _, n := range news {
+		newsWithTopics := getTopicsForNews(n, topics)
+		filteredTopicIDs := filterTopics(newsWithTopics)
+
+		now := time.Now()
+
+		if len(filteredTopicIDs) == 0 {
+			log.Printf("Новость ID=%d: подходящих тем не найдено", n.ID)
+
+			// WithoutTopics ставим только при полной проверке (по всем темам)
+			if isFullCheck {
+				db.Model(&models.News{}).Where("id = ?", n.ID).Update("without_topics", true)
+			}
+
+			db.Model(&models.News{}).Where("id = ?", n.ID).Update("topics_checked_at", now)
+			continue
+		}
+
+
+		var topicModels []*models.Topic
+		err := db.Where("id IN ?", filteredTopicIDs).Find(&topicModels).Error
+		if err != nil {
+			log.Printf("Ошибка загрузки тем для новости ID=%d: %v", n.ID, err)
+			continue
+		}
+
+		var newsModel models.News
+		err = db.First(&newsModel, n.ID).Error
+		if err != nil {
+			log.Printf("Новость ID=%d не найдена в БД: %v", n.ID, err)
+			continue
+		}
+
+		err = db.Model(&newsModel).Association("Topics").Append(topicModels)
+		if err != nil {
+			log.Printf("Ошибка привязки тем к новости ID=%d: %v", n.ID, err)
+			continue
+		}
+
+		// Если раньше стоял WithoutTopics — сбрасываем, т.к. теперь темы нашлись
+		if newsModel.WithoutTopics {
+			db.Model(&models.News{}).Where("id = ?", n.ID).Update("without_topics", false)
+		}
+
+		db.Model(&models.News{}).Where("id = ?", n.ID).Update("topics_checked_at", now)
+		log.Printf("Новость ID=%d: привязано %d тем", n.ID, len(topicModels))
+	}
 }
 
 func getTopicsForNews(news SimpleNews, topics []SimpleTopic) NewsWithTopics {
@@ -166,8 +255,6 @@ func getTopicsForNews(news SimpleNews, topics []SimpleTopic) NewsWithTopics {
 
 	var modelResponse ModelResponse
 
-	fmt.Println("Raw API response:", string(responseBody))
-
 	err = json.Unmarshal(responseBody, &modelResponse)
 	if err != nil {
 		log.Fatal(err)
@@ -191,7 +278,7 @@ func getTopicsForNews(news SimpleNews, topics []SimpleTopic) NewsWithTopics {
 func filterTopics(newsWithTopics NewsWithTopics) []uint {
 	var filteredTopics []uint
 	for _, topic := range newsWithTopics.Topics {
-		if topic.Score > 0.7 {
+		if topic.Score > ScoreThreshold {
 			filteredTopics = append(filteredTopics, topic.TopicID)
 		}
 	}
@@ -199,45 +286,58 @@ func filterTopics(newsWithTopics NewsWithTopics) []uint {
 }
 
 func CronTopicsTask(db *gorm.DB) {
-	news, err := getNewsWithoutTopics(db)
+	now := time.Now()
+
+	// 1. Новые новости (TopicsCheckedAt IS NULL)
+	newNews, err := getUnprocessedNews(db)
 	if err != nil {
-		log.Fatal(err)
+		log.Printf("Ошибка получения необработанных новостей: %v", err)
+		return
 	}
-	log.Println("Новости получены")
 
-	topics, err := getAllTopics(db)
-	if err != nil {
-		log.Fatal(err)
+	// 2. Новые темы (CreatedAt > lastProcessedTime). При первом запуске — пусто
+	var newTopics []SimpleTopic
+	if lastProcessedTime != nil {
+		newTopics, err = getNewTopics(db, *lastProcessedTime)
+		if err != nil {
+			log.Printf("Ошибка получения новых тем: %v", err)
+			return
+		}
 	}
-	log.Println("Темы получены")
 
-	for _, n := range news {
-		newsWithTopics := getTopicsForNews(n, topics)
-		filteredTopicIDs := filterTopics(newsWithTopics)
+	hasNewNews := len(newNews) > 0
+	hasNewTopics := len(newTopics) > 0
 
-		if len(filteredTopicIDs) == 0 {
-			log.Printf("Новость ID=%d: подходящих тем не найдено", n.ID)
-			continue
-		}
-
-		var topicModels []*models.Topic
-		if err := db.Where("id IN ?", filteredTopicIDs).Find(&topicModels).Error; err != nil {
-			log.Printf("Ошибка загрузки тем для новости ID=%d: %v", n.ID, err)
-			continue
-		}
-
-		var newsModel models.News
-		if err := db.First(&newsModel, n.ID).Error; err != nil {
-			log.Printf("Новость ID=%d не найдена в БД: %v", n.ID, err)
-			continue
-		}
-
-		if err := db.Model(&newsModel).Association("Topics").Append(topicModels); err != nil {
-			log.Printf("Ошибка привязки тем к новости ID=%d: %v", n.ID, err)
-			continue
-		}
-
-		log.Printf("Новость ID=%d: привязано %d тем", n.ID, len(topicModels))
+	if !hasNewNews && !hasNewTopics {
+		log.Println("Нет новых новостей и тем, пропускаем")
+		lastProcessedTime = &now
+		return
 	}
-	log.Println("Темы обновлены")
+
+	// Сценарий 1 + 3: Новые новости - прогнать по ВСЕМ темам
+	if hasNewNews {
+		allTopics, err := getAllTopics(db)
+		if err != nil {
+			log.Printf("Ошибка получения всех тем: %v", err)
+			return
+		}
+
+		log.Printf("Обработка %d новых новостей по %d темам", len(newNews), len(allTopics))
+		processNewsAgainstTopics(newNews, allTopics, db, true)
+	}
+
+	// Сценарий 2 + 3: Новые темы - прогнать СТАРЫЕ новости по новым темам
+	if hasNewTopics {
+		oldNews, err := getProcessedNews(db)
+		if err != nil {
+			log.Printf("Ошибка получения старых новостей: %v", err)
+			lastProcessedTime = &now
+			return
+		}
+		log.Printf("Перепроверка %d старых новостей по %d новым темам", len(oldNews), len(newTopics))
+		processNewsAgainstTopics(oldNews, newTopics, db, false)
+	}
+
+	lastProcessedTime = &now
+	log.Println("CronTopicsTask завершён")
 }
