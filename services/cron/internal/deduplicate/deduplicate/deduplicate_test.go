@@ -14,6 +14,7 @@ import (
 	"smartFlow/services/cron/internal/deduplicate/vectordb"
 
 	"github.com/qdrant/go-client/qdrant"
+	"gorm.io/gorm"
 )
 
 const (
@@ -119,6 +120,61 @@ func setupSeed(t *testing.T) {
 	}
 }
 
+func setupSeedAndDeduplicate(t *testing.T, db *gorm.DB, client *qdrant.Client, ctx context.Context) {
+	t.Log("Создание тестового канала...")
+	// Канал может уже существовать, поэтому ошибку игнорируем
+	_ = postJSON(backendURL+"/channels/create-channel", map[string]string{
+		"Link": "https://t.me/test_channel",
+		"Name": "Тестовый канал",
+	})
+
+	// Тестовые новости: 3 о космосе, 2 об экономике, 1 шум
+	newsItems := []map[string]interface{}{
+		// Группа "Космос" (должны быть дубликатами друг друга)
+		{
+			"Body":        "Компания SpaceX Илона Маска успешно запустила тяжелую ракету Falcon Heavy, которая вывела на орбиту Земли новую партию интернет-спутников Starlink.",
+			"MessageLink": "https://t.me/space/1",
+			"ChannelID":   1,
+		},
+		{
+			"Body":        "Очередная партия спутников Starlink выведена на околоземную орбиту с помощью ракетоносителя Falcon Heavy от корпорации SpaceX.",
+			"MessageLink": "https://t.me/tech/22",
+			"ChannelID":   1,
+		},
+		{
+			"Body":        "Тяжелая ракета Falcon Heavy успешно стартовала сегодня утром. SpaceX доставила на орбиту Земли новые телекоммуникационные спутники Starlink Илона Маска.",
+			"MessageLink": "https://t.me/news/333",
+			"ChannelID":   1,
+		},
+		// Группа "Экономика" (должны быть дубликатами друг друга)
+		{
+			"Body":        "Центральный Банк принял решение повысить ключевую ставку сразу на 2 процента на фоне растущей инфляции в стране.",
+			"MessageLink": "https://t.me/finance/44",
+			"ChannelID":   1,
+		},
+		{
+			"Body":        "Из-за ускоряющейся инфляции регулятор (ЦБ) вынужденно увеличил ставку рефинансирования на 200 базисных пунктов (2%).",
+			"MessageLink": "https://t.me/bank/55",
+			"ChannelID":   1,
+		},
+		// "Шум" — НЕ дубликат ни к одной из групп
+		{
+			"Body":        "Илон Маск представил новую бюджетную модель электромобиля Tesla Model 2 стоимостью около 25 тысяч долларов.",
+			"MessageLink": "https://t.me/auto/66",
+			"ChannelID":   1,
+		},
+	}
+
+	for i, item := range newsItems {
+		t.Logf("Создание новости %d...", i+1)
+		if err := postJSON(backendURL+"/news/create-news", item); err != nil {
+			t.Fatalf("Не удалось создать новость %d: %v", i+1, err)
+		}
+		t.Logf("Дедуплицируем новость %d...", i+1)
+		CronDeduplicateTask(db, client, ctx)
+	}
+}
+
 // setupQdrantCollection — пересоздание коллекции Qdrant
 func setupQdrantCollection(t *testing.T, client *qdrant.Client, ctx context.Context) {
 	exist, err := vectordb.CollectionExists("news")
@@ -141,7 +197,7 @@ func setupQdrantCollection(t *testing.T, client *qdrant.Client, ctx context.Cont
 	}
 }
 
-func TestCronDeduplicateTask(t *testing.T) {
+func TestCronDeduplicateTask1(t *testing.T) {
 	// === 1. Подключение к PostgreSQL ===
 	db, err := database.Init(database.GetDSN())
 	if err != nil {
@@ -209,5 +265,72 @@ func TestCronDeduplicateTask(t *testing.T) {
 			noiseNews.ID, len(noiseNews.Duplicates))
 	}
 
-	t.Log("=== Тест дедупликации завершён ===")
+	t.Log("=== Тест дедупликации №1 завершён ===")
+}
+
+func TestCronDeduplicateTask2(t *testing.T) {
+		// === 1. Подключение к PostgreSQL ===
+	db, err := database.Init(database.GetDSN())
+	if err != nil {
+		t.Fatalf("Не удалось подключиться к PostgreSQL: %v", err)
+	}
+
+	// === 2. Подключение к Qdrant ===
+	client, err := qdrant.NewClient(&qdrant.Config{
+		Host: "localhost",
+		Port: 6334,
+	})
+	if err != nil {
+		t.Fatalf("Не удалось подключиться к Qdrant: %v", err)
+	}
+	ctx := context.Background()
+
+	// === 3. Очистка ===
+	setupClean(t)
+
+	// === 4. Пересоздание коллекции Qdrant ===
+	setupQdrantCollection(t, client, ctx)
+
+	//проверяем работает ли если по одной
+	setupSeedAndDeduplicate(t, db, client, ctx)
+
+	// === 7. Проверка результатов ===
+	t.Log("Проверка дубликатов в базе данных...")
+
+	var allNews []models.News
+	if err := db.Preload("Duplicates").Find(&allNews).Error; err != nil {
+		t.Fatalf("Не удалось загрузить новости с дубликатами: %v", err)
+	}
+
+	if len(allNews) != 6 {
+		t.Fatalf("Ожидалось 6 новостей, получено %d", len(allNews))
+	}
+
+	for _, news := range allNews {
+		log.Printf("Новость ID=%d, Body=%.50s..., Дубликатов=%d",
+			news.ID, news.Body, len(news.Duplicates))
+	}
+
+	// Космические новости (первые 3) — должны иметь дубликаты
+	for _, news := range allNews[:3] {
+		if len(news.Duplicates) == 0 {
+			t.Errorf("Космическая новость ID=%d должна иметь дубликаты, но имеет 0", news.ID)
+		}
+	}
+
+	// Экономические новости (4 и 5) — должны иметь дубликат друг друга
+	for _, news := range allNews[3:5] {
+		if len(news.Duplicates) == 0 {
+			t.Errorf("Экономическая новость ID=%d должна иметь дубликаты, но имеет 0", news.ID)
+		}
+	}
+
+	// "Шум" (6) — НЕ должен иметь дубликатов
+	noiseNews := allNews[5]
+	if len(noiseNews.Duplicates) != 0 {
+		t.Errorf("Новость-шум ID=%d НЕ должна иметь дубликатов, но имеет %d",
+			noiseNews.ID, len(noiseNews.Duplicates))
+	}
+
+	t.Log("=== Тест дедупликации №2 завершён ===") 
 }

@@ -5,12 +5,15 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"smartFlow/internal/database"
 	"smartFlow/internal/models"
-	"smartFlow/services/cron/internal/deduplicate/vectordb"
 	"smartFlow/services/cron/internal/deduplicate/deduplicate"
+	"smartFlow/services/cron/internal/deduplicate/vectordb"
+	"smartFlow/services/cron/internal/topics"
 
+	"github.com/go-co-op/gocron/v2"
 	"github.com/qdrant/go-client/qdrant"
 )
 
@@ -70,5 +73,34 @@ func main() {
 		os.Exit(1)
 	}
 
-	deduplicate.CronDeduplicateTask(db, client, ctx)
+	//Cron
+	scheduler, err := gocron.NewScheduler()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer scheduler.Shutdown()
+
+	//дедупликация
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(10 * time.Second),
+		gocron.NewTask(deduplicate.CronDeduplicateTask, db, client, ctx),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//Темы
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(10 * time.Second),
+		gocron.NewTask(topics.CronTopicsTask, db),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	
+	scheduler.Start()
+
+	select {}
 }
