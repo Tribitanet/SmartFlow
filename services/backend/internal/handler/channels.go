@@ -7,6 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// @Summary Create a channel
+// @Description Creates a new channel in the database
+// @Tags channels
+// @Accept json
+// @Produce json
+// @Param channel body models.Channel true "Channel Data"
+// @Success 200 {object} models.Channel
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /channels [post]
 func (h *Handler) createChannel(c *gin.Context) {
 	var channel models.Channel
 

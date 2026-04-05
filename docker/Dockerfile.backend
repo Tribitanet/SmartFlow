@@ -1,0 +1,28 @@
+FROM golang:alpine AS builder
+
+WORKDIR /app
+
+ENV GOPROXY=https://proxy.golang.org,direct
+ENV GOTOOLCHAIN=auto
+
+# Скачиваем зависимости (кэш модулей сохраняется между сборками)
+COPY go.mod go.sum ./
+RUN --mount=type=cache,target=/go/pkg/mod go mod download
+
+# Копируем всё остальное
+COPY . .
+
+# Собираем бинарник (кэш компиляции тоже сохраняется)
+RUN --mount=type=cache,target=/go/pkg/mod \
+    --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 GOOS=linux go build -o backend ./services/backend/cmd
+
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /app/backend .
+
+ENV PG_HOST=database
+ENV QDRANT_HOST=qdrant
+
+EXPOSE 8080
+CMD ["./backend"]

@@ -20,9 +20,14 @@ import (
 
 func main() {
 
+	qdrantHost := os.Getenv("QDRANT_HOST")
+	if qdrantHost == "" {
+		qdrantHost = "localhost"
+	}
+
 	//поднимаем qdrant
 	config := qdrant.Config{
-		Host: "localhost",
+		Host: qdrantHost,
 		Port: 6334,
 	}
 

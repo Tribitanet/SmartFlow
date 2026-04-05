@@ -89,7 +89,7 @@ func TestCronStopThemesTask(t *testing.T) {
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.StopTheme{})
 
 	// Создаём канал (если нет)
-	_ = postJSON("http://localhost:8080/channels/create-channel", map[string]string{
+	_ = postJSON("http://localhost:8080/channels", map[string]string{
 		"Link": "https://t.me/test_channel",
 		"Name": "Тестовый канал",
 	})
@@ -124,7 +124,7 @@ func TestCronStopThemesTask(t *testing.T) {
 		},
 	}
 	for i, item := range newsItems {
-		if err := postJSON("http://localhost:8080/news/create-news", item); err != nil {
+		if err := postJSON("http://localhost:8080/news", item); err != nil {
 			t.Fatalf("Не удалось создать новость %d: %v", i+1, err)
 		}
 	}
@@ -248,7 +248,7 @@ func TestCronStopThemesTask(t *testing.T) {
 	t.Log("\n=== СЦЕНАРИЙ 3: Добавляем стоп-тему 'Наркотики' + новость про наркотики ===")
 	db.Create(&models.StopTheme{Name: "Наркотики"})
 
-	if err := postJSON("http://localhost:8080/news/create-news", map[string]interface{}{
+	if err := postJSON("http://localhost:8080/news", map[string]interface{}{
 		"Body":        "Полиция задержала крупную партию наркотиков на границе, изъято более 500 килограммов запрещённых веществ на сумму свыше миллиарда рублей.",
 		"MessageLink": "https://t.me/crime/4",
 		"ChannelID":   1,

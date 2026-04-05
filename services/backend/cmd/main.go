@@ -9,6 +9,11 @@ import (
 	server "smartFlow/services/backend/internal/server"
 )
 
+// @title SmartFlow REST API
+// @version 1.0
+// @description API Server for SmartFlow application
+// @host localhost:8080
+// @BasePath /
 func main() {
 	err := database.CheckDB()
 	if err != nil {

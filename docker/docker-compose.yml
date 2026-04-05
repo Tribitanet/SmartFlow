@@ -8,11 +8,46 @@ services:
       POSTGRES_USER: ${PG_USER}
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${PG_USER}"]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+
   qdrant:
     image: qdrant/qdrant:latest
     ports: ["6333:6333", "6334:6334"]
     volumes:
       - qdrant_storage:/qdrant/storage
+
+  backend:
+    image: smartflow-backend
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.backend
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../.env:/app/.env
+    restart: on-failure
+    depends_on:
+      database:
+        condition: service_healthy
+
+  cron:
+    image: smartflow-cron
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.cron
+    volumes:
+      - ../.env:/app/.env
+    restart: on-failure
+    depends_on:
+      database:
+        condition: service_healthy
+      qdrant:
+        condition: service_started
 
 volumes:
   pg_data:

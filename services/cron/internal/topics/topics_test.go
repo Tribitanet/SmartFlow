@@ -89,7 +89,7 @@ func TestCronTopicsTask(t *testing.T) {
 	db.Session(&gorm.Session{AllowGlobalUpdate: true}).Delete(&models.Topic{})
 
 	// Создаём канал (если нет)
-	_ = postJSON("http://localhost:8080/channels/create-channel", map[string]string{
+	_ = postJSON("http://localhost:8080/channels", map[string]string{
 		"Link": "https://t.me/test_channel",
 		"Name": "Тестовый канал",
 	})
@@ -119,7 +119,7 @@ func TestCronTopicsTask(t *testing.T) {
 		},
 	}
 	for i, item := range newsItems {
-		if err := postJSON("http://localhost:8080/news/create-news", item); err != nil {
+		if err := postJSON("http://localhost:8080/news", item); err != nil {
 			t.Fatalf("Не удалось создать новость %d: %v", i+1, err)
 		}
 	}
@@ -238,7 +238,7 @@ func TestCronTopicsTask(t *testing.T) {
 	t.Log("\n=== СЦЕНАРИЙ 3: Добавляем тему 'Культура' + новость о культуре ===")
 	db.Create(&models.Topic{Name: "Культура"})
 
-	if err := postJSON("http://localhost:8080/news/create-news", map[string]interface{}{
+	if err := postJSON("http://localhost:8080/news", map[string]interface{}{
 		"Body":        "Государственный Эрмитаж представил публике уникальную экспозицию, объединившую редчайшие полотна французских импрессионистов из закрытых частных собраний.",
 		"MessageLink": "https://t.me/culture/4",
 		"ChannelID":   1,

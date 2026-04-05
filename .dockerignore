@@ -1,0 +1,11 @@
+.git
+.gitignore
+.env
+.vscode
+.idea
+docker
+docs
+demo_news.txt
+requests.http
+**/*_test.go
+**/testdata

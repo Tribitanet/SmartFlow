@@ -58,7 +58,7 @@ func httpDelete(url string) error {
 // setupClean — Шаг 1-3: Очистка БД и Qdrant
 func setupClean(t *testing.T) {
 	t.Log("Очистка новостей в БД...")
-	if err := httpDelete(backendURL + "/news/delete-all-news"); err != nil {
+	if err := httpDelete(backendURL + "/news"); err != nil {
 		t.Fatalf("Не удалось очистить новости: %v", err)
 	}
 
@@ -70,7 +70,7 @@ func setupClean(t *testing.T) {
 func setupSeed(t *testing.T) {
 	t.Log("Создание тестового канала...")
 	// Канал может уже существовать, поэтому ошибку игнорируем
-	_ = postJSON(backendURL+"/channels/create-channel", map[string]string{
+	_ = postJSON(backendURL+"/channels", map[string]string{
 		"Link": "https://t.me/test_channel",
 		"Name": "Тестовый канал",
 	})
@@ -114,7 +114,7 @@ func setupSeed(t *testing.T) {
 
 	for i, item := range newsItems {
 		t.Logf("Создание новости %d...", i+1)
-		if err := postJSON(backendURL+"/news/create-news", item); err != nil {
+		if err := postJSON(backendURL+"/news", item); err != nil {
 			t.Fatalf("Не удалось создать новость %d: %v", i+1, err)
 		}
 	}
@@ -123,7 +123,7 @@ func setupSeed(t *testing.T) {
 func setupSeedAndDeduplicate(t *testing.T, db *gorm.DB, client *qdrant.Client, ctx context.Context) {
 	t.Log("Создание тестового канала...")
 	// Канал может уже существовать, поэтому ошибку игнорируем
-	_ = postJSON(backendURL+"/channels/create-channel", map[string]string{
+	_ = postJSON(backendURL+"/channels", map[string]string{
 		"Link": "https://t.me/test_channel",
 		"Name": "Тестовый канал",
 	})
@@ -167,7 +167,7 @@ func setupSeedAndDeduplicate(t *testing.T, db *gorm.DB, client *qdrant.Client, c
 
 	for i, item := range newsItems {
 		t.Logf("Создание новости %d...", i+1)
-		if err := postJSON(backendURL+"/news/create-news", item); err != nil {
+		if err := postJSON(backendURL+"/news", item); err != nil {
 			t.Fatalf("Не удалось создать новость %d: %v", i+1, err)
 		}
 		t.Logf("Дедуплицируем новость %d...", i+1)

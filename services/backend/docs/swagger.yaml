@@ -1,0 +1,440 @@
+basePath: /
+definitions:
+  models.Channel:
+    properties:
+      id:
+        type: integer
+      link:
+        type: string
+      name:
+        type: string
+      news:
+        items:
+          $ref: '#/definitions/models.News'
+        type: array
+      users:
+        items:
+          $ref: '#/definitions/models.User'
+        type: array
+    type: object
+  models.News:
+    properties:
+      body:
+        type: string
+      channel:
+        $ref: '#/definitions/models.Channel'
+      channelID:
+        type: integer
+      createdAt:
+        type: string
+      duplicates:
+        items:
+          $ref: '#/definitions/models.News'
+        type: array
+      id:
+        type: integer
+      messageLink:
+        type: string
+      stopThemes:
+        items:
+          $ref: '#/definitions/models.StopTheme'
+        type: array
+      stopThemesCheckedAt:
+        type: string
+      topics:
+        items:
+          $ref: '#/definitions/models.Topic'
+        type: array
+      topicsCheckedAt:
+        type: string
+      withoutTopics:
+        type: boolean
+    type: object
+  models.StopTheme:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      news:
+        items:
+          $ref: '#/definitions/models.News'
+        type: array
+    type: object
+  models.Topic:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: integer
+      name:
+        type: string
+      news:
+        items:
+          $ref: '#/definitions/models.News'
+        type: array
+    type: object
+  models.User:
+    properties:
+      channels:
+        items:
+          $ref: '#/definitions/models.Channel'
+        type: array
+      email:
+        type: string
+      id:
+        type: integer
+      password:
+        type: string
+      stopThemes:
+        items:
+          $ref: '#/definitions/models.StopTheme'
+        type: array
+      topics:
+        items:
+          $ref: '#/definitions/models.Topic'
+        type: array
+      username:
+        type: string
+    type: object
+host: localhost:8080
+info:
+  contact: {}
+  description: API Server for SmartFlow application
+  title: SmartFlow REST API
+  version: "1.0"
+paths:
+  /channels:
+    post:
+      consumes:
+      - application/json
+      description: Creates a new channel in the database
+      parameters:
+      - description: Channel Data
+        in: body
+        name: channel
+        required: true
+        schema:
+          $ref: '#/definitions/models.Channel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Channel'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a channel
+      tags:
+      - channels
+  /fields/channels:
+    get:
+      description: Fetch a list of all stored channels
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Channel'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all channels
+      tags:
+      - fields
+  /fields/stop-themes:
+    get:
+      description: Fetch a list of all defined stop themes
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.StopTheme'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all stop themes
+      tags:
+      - fields
+  /fields/topics:
+    get:
+      description: Fetch a list of all defined topics
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Topic'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all topics
+      tags:
+      - fields
+  /news:
+    delete:
+      description: Cleans junction tables then safely removes all news
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete all news
+      tags:
+      - news
+    post:
+      consumes:
+      - application/json
+      description: Adds a new news entry to the database
+      parameters:
+      - description: News Data
+        in: body
+        name: news
+        required: true
+        schema:
+          $ref: '#/definitions/models.News'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.News'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create news
+      tags:
+      - news
+  /news/{id}:
+    delete:
+      description: Deletes a specific news item by ID
+      parameters:
+      - description: News ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete news
+      tags:
+      - news
+  /users:
+    post:
+      consumes:
+      - application/json
+      description: Registers a new user
+      parameters:
+      - description: User Data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Create a user
+      tags:
+      - users
+  /users/{id}:
+    delete:
+      description: Removes user and cleans their many-to-many associations
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Delete a user
+      tags:
+      - users
+    get:
+      description: Retrieves user information by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get a user
+      tags:
+      - users
+    put:
+      consumes:
+      - application/json
+      description: Updates user details by ID
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Updated User Data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/models.User'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Update a user
+      tags:
+      - users
+swagger: "2.0"

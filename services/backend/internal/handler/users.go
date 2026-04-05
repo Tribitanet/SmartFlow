@@ -7,6 +7,16 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// @Summary Create a user
+// @Description Registers a new user
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param user body models.User true "User Data"
+// @Success 200 {object} models.User
+// @Failure 400 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /users [post]
 func (h *Handler) createUser(c *gin.Context) {
 	var user models.User
 	if err := c.ShouldBindJSON(&user); err != nil {
@@ -22,8 +32,17 @@ func (h *Handler) createUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// @Summary Get a user
+// @Description Retrieves user information by ID
+// @Tags users
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} models.User
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Router /users/{id} [get]
 func (h *Handler) getUser(c *gin.Context) {
-	id := c.Query("id")
+	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
 		return
@@ -37,8 +56,18 @@ func (h *Handler) getUser(c *gin.Context) {
 	c.JSON(http.StatusOK, user)
 }
 
+// @Summary Delete a user
+// @Description Removes user and cleans their many-to-many associations
+// @Tags users
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} map[string]string
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /users/{id} [delete]
 func (h *Handler) deleteUser(c *gin.Context) {
-	id := c.Query("id")
+	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
 		return
@@ -63,8 +92,20 @@ func (h *Handler) deleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
 }
 
+// @Summary Update a user
+// @Description Updates user details by ID
+// @Tags users
+// @Accept json
+// @Produce json
+// @Param id path string true "User ID"
+// @Param user body models.User true "Updated User Data"
+// @Success 200 {object} models.User
+// @Failure 400 {object} map[string]string
+// @Failure 404 {object} map[string]string
+// @Failure 500 {object} map[string]string
+// @Router /users/{id} [put]
 func (h *Handler) updateUser(c *gin.Context) {
-	id := c.Query("id")
+	id := c.Param("id")
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "id is required"})
 		return

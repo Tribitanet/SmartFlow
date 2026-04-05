@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 )
 
 type collectionExistsResponse struct {
@@ -15,7 +16,11 @@ type collectionExistsResponse struct {
 }
 
 func CollectionExists(collectionName string) (bool, error) {
-	req := fmt.Sprintf("http://localhost:6333/collections/%s/exists", collectionName)
+	host := os.Getenv("QDRANT_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	req := fmt.Sprintf("http://%s:6333/collections/%s/exists", host, collectionName)
 	resp, err := http.Get(req)
 	if err != nil {
 		return false, err

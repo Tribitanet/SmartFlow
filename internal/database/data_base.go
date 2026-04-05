@@ -28,6 +28,10 @@ func CheckDB() error {
 }
 
 func GetDSN() string {
+	host := os.Getenv("PG_HOST")
+	if host == "" {
+		host = "127.0.0.1"
+	}
 	user := os.Getenv("PG_USER")
 	if user == "" {
 		user = "smartflow"
@@ -36,5 +40,5 @@ func GetDSN() string {
 	if pass == "" {
 		pass = "12345678"
 	}
-	return fmt.Sprintf("postgres://%s:%s@127.0.0.1:5432/%s?sslmode=disable", user, pass, user)
+	return fmt.Sprintf("postgres://%s:%s@%s:5432/%s?sslmode=disable", user, pass, host, user)
 }
