@@ -9,8 +9,15 @@ ENV GOTOOLCHAIN=auto
 COPY go.mod go.sum ./
 RUN --mount=type=cache,target=/go/pkg/mod go mod download
 
+# Устанавливаем swag для генерации Swagger документации
+RUN --mount=type=cache,target=/go/pkg/mod \
+    go install github.com/swaggo/swag/cmd/swag@latest
+
 # Копируем всё остальное
 COPY . .
+
+# Генерируем Swagger документацию
+RUN swag init -g services/backend/cmd/main.go -d . -o services/backend/docs
 
 # Собираем бинарник (кэш компиляции тоже сохраняется)
 RUN --mount=type=cache,target=/go/pkg/mod \

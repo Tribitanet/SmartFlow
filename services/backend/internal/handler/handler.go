@@ -1,11 +1,16 @@
 package handler
 
 import (
+	"path/filepath"
+	"runtime"
+
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
+
 	_ "smartFlow/services/backend/docs"
+
 	ginSwagger "github.com/swaggo/gin-swagger"
-	"github.com/swaggo/files"
+	swaggerFiles "github.com/swaggo/files"
 )
 
 type Handler struct {
@@ -15,6 +20,16 @@ type Handler struct {
 func (h *Handler) InitRoutes() *gin.Engine {
 	router := gin.New()
 
+	// Загрузка HTML-шаблонов
+	_, b, _, _ := runtime.Caller(0)
+	basePath := filepath.Dir(b)
+	templatesPath := filepath.Join(basePath, "..", "..", "web", "templates", "*")
+	router.LoadHTMLGlob(templatesPath)
+
+	// Главная страница (фронтенд)
+	router.GET("/", h.indexPage)
+
+	// REST API
 	users := router.Group("/users")
 	{
 		users.POST("", h.createUser)
