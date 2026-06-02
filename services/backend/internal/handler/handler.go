@@ -9,8 +9,8 @@ import (
 
 	_ "smartFlow/services/backend/docs"
 
-	ginSwagger "github.com/swaggo/gin-swagger"
 	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Handler struct {
@@ -23,38 +23,53 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	// Загрузка HTML-шаблонов
 	_, b, _, _ := runtime.Caller(0)
 	basePath := filepath.Dir(b)
-	templatesPath := filepath.Join(basePath, "..", "..", "web", "templates", "*")
+	templatesPath := filepath.Join(basePath, "..", "..", "web", "pages", "*")
 	router.LoadHTMLGlob(templatesPath)
 
 	// Главная страница (фронтенд)
 	router.GET("/", h.indexPage)
 
-	// REST API
+	// === Публичные маршруты (без авторизации) ===
+	auth := router.Group("/auth")
+	{
+		auth.POST("/register", h.createUser)
+		auth.POST("/login", h.loginUser)
+	}
+
+	// === Защищённые маршруты (сюда позже добавится auth middleware) ===
+	// users.Use(AuthMiddleware())
 	users := router.Group("/users")
 	{
-		users.POST("", h.createUser)
 		users.GET("/:id", h.getUser)
-		users.DELETE("/:id", h.deleteUser)
 		users.PUT("/:id", h.updateUser)
+		users.DELETE("/:id", h.deleteUser)
+
+		// Каналы пользователя
+		users.GET("/:id/channels", h.getUserChannels)
+		users.POST("/:id/channels", h.addUserChannel)
+		users.DELETE("/:id/channels/:channelId", h.removeUserChannel)
+
+		// Категории пользователя
+		users.GET("/:id/topics", h.getUserTopics)
+		users.POST("/:id/topics", h.addUserTopic)
+		users.DELETE("/:id/topics/:topicId", h.removeUserTopic)
+
+		// Стоп-темы пользователя
+		users.GET("/:id/stop-themes", h.getUserStopThemes)
+		users.POST("/:id/stop-themes", h.addUserStopTheme)
+		users.DELETE("/:id/stop-themes/:stopThemeId", h.removeUserStopTheme)
+
+		// Лента новостей пользователя
+		users.GET("/:id/news", h.getUserNews)
+		users.GET("/:id/blocked-news/:stopThemeId", h.getUserBlockedNews)
 	}
 
 	news := router.Group("/news")
 	{
+		news.GET("", h.getAllNews)
 		news.POST("", h.createNews)
 		news.DELETE("/:id", h.deleteNews)
 		news.DELETE("", h.deleteAllNews)
-	}
-
-	channels := router.Group("/channels")
-	{
-		channels.POST("", h.createChannel)
-	}
-
-	fields := router.Group("/fields")
-	{
-		fields.GET("/stop-themes", h.getStopThemes)
-		fields.GET("/topics", h.getTopics)
-		fields.GET("/channels", h.getChannels)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

@@ -53,30 +53,40 @@ func getQdrantPoints(news []SimpleNews) ([]*qdrant.PointStruct, error) {
 	return points, nil
 }
 
+func duplicateExists(tx *gorm.DB, newsID, duplicateID uint) bool {
+	var count int64
+	tx.Table("news_duplicates").
+		Where("news_id = ? AND duplicate_id = ?", newsID, duplicateID).
+		Count(&count)
+	return count > 0
+}
+
 func addDuplicate(db *gorm.DB, a, b uint) error {
-	var newsA, newsB models.News
+	return db.Transaction(func(tx *gorm.DB) error {
+		if duplicateExists(tx, a, b) {
+			return nil
+		}
 
-	err := db.First(&newsA, a).Error
-	if err != nil {
-		return err
-	}
+		var newsA, newsB models.News
 
-	err = db.First(&newsB, b).Error
-	if err != nil {
-		return err
-	}
+		if err := tx.First(&newsA, a).Error; err != nil {
+			return err
+		}
 
-	err = db.Model(&newsA).Association("Duplicates").Append(&newsB)
-	if err != nil {
-		return err
-	}
+		if err := tx.First(&newsB, b).Error; err != nil {
+			return err
+		}
 
-	err = db.Model(&newsB).Association("Duplicates").Append(&newsA)
-	if err != nil {
-		return err
-	}
+		if err := tx.Model(&newsA).Association("Duplicates").Append(&newsB); err != nil {
+			return err
+		}
 
-	return nil
+		if err := tx.Model(&newsB).Association("Duplicates").Append(&newsA); err != nil {
+			return err
+		}
+
+		return nil
+	})
 }
 
 
@@ -95,10 +105,13 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 
 	
 	for _, point := range points {
-		client.Upsert(ctx, &qdrant.UpsertPoints{
+		_, err = client.Upsert(ctx, &qdrant.UpsertPoints{
 			CollectionName: "news",
 			Points:         []*qdrant.PointStruct{point},
 		})
+		if err != nil {
+			log.Fatal(err)
+		}
 
 		response, err := client.GetPointsClient().Recommend(ctx, &qdrant.RecommendPoints{
 			CollectionName: "news",
@@ -112,6 +125,7 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 
 		similarPoints := response.GetResult()
 		for _, simPoint := range similarPoints {
+			log.Printf("Найден дубликат! ID: %d <-> %d, Скор схожести: %f", point.Id.GetNum(), simPoint.Id.GetNum(), simPoint.Score)
 			addDuplicate(db, uint(simPoint.Id.GetNum()), uint(point.Id.GetNum()))
 		}
 	}

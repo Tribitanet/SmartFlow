@@ -1,5 +1,85 @@
 basePath: /
 definitions:
+  handler.ChannelRef:
+    properties:
+      id:
+        type: integer
+      link:
+        type: string
+      name:
+        type: string
+    type: object
+  handler.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handler.LoginResponse:
+    properties:
+      token:
+        type: string
+      user_id:
+        type: integer
+      username:
+        type: string
+    type: object
+  handler.NewsGroup:
+    properties:
+      duplicate_count:
+        type: integer
+      duplicates:
+        items:
+          $ref: '#/definitions/handler.NewsItem'
+        type: array
+      main:
+        $ref: '#/definitions/handler.NewsItem'
+    type: object
+  handler.NewsItem:
+    properties:
+      body:
+        type: string
+      channel:
+        $ref: '#/definitions/handler.ChannelRef'
+      created_at:
+        type: string
+      id:
+        type: integer
+      message_link:
+        type: string
+      topics:
+        items:
+          $ref: '#/definitions/handler.TopicRef'
+        type: array
+    type: object
+  handler.RegisterRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  handler.TopicRef:
+    properties:
+      id:
+        type: integer
+      name:
+        type: string
+    type: object
+  handler.UpdateUserRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
   models.Channel:
     properties:
       id:
@@ -82,12 +162,8 @@ definitions:
         items:
           $ref: '#/definitions/models.Channel'
         type: array
-      email:
-        type: string
       id:
         type: integer
-      password:
-        type: string
       stopThemes:
         items:
           $ref: '#/definitions/models.StopTheme'
@@ -106,25 +182,59 @@ info:
   title: SmartFlow REST API
   version: "1.0"
 paths:
-  /channels:
+  /auth/login:
     post:
       consumes:
       - application/json
-      description: Creates a new channel in the database
+      description: Authenticates user by username and password, returns JWT token
       parameters:
-      - description: Channel Data
+      - description: Login credentials
         in: body
-        name: channel
+        name: credentials
         required: true
         schema:
-          $ref: '#/definitions/models.Channel'
+          $ref: '#/definitions/handler.LoginRequest'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/models.Channel'
+            $ref: '#/definitions/handler.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Login
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers a new user (public, no auth required)
+      parameters:
+      - description: Registration data
+        in: body
+        name: user
+        required: true
+        schema:
+          $ref: '#/definitions/handler.RegisterRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.User'
         "400":
           description: Bad Request
           schema:
@@ -137,72 +247,9 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Create a channel
+      summary: Register a new user
       tags:
-      - channels
-  /fields/channels:
-    get:
-      description: Fetch a list of all stored channels
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.Channel'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get all channels
-      tags:
-      - fields
-  /fields/stop-themes:
-    get:
-      description: Fetch a list of all defined stop themes
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.StopTheme'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get all stop themes
-      tags:
-      - fields
-  /fields/topics:
-    get:
-      description: Fetch a list of all defined topics
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/models.Topic'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Get all topics
-      tags:
-      - fields
+      - auth
   /news:
     delete:
       description: Cleans junction tables then safely removes all news
@@ -222,6 +269,32 @@ paths:
               type: string
             type: object
       summary: Delete all news
+      tags:
+      - news
+    get:
+      description: Returns news with preloaded Topics, Channel, Duplicates. Optional
+        filter by topic_id.
+      parameters:
+      - description: Filter by topic ID
+        in: query
+        name: topic_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.News'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get all news
       tags:
       - news
     post:
@@ -290,40 +363,6 @@ paths:
       summary: Delete news
       tags:
       - news
-  /users:
-    post:
-      consumes:
-      - application/json
-      description: Registers a new user
-      parameters:
-      - description: User Data
-        in: body
-        name: user
-        required: true
-        schema:
-          $ref: '#/definitions/models.User'
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/models.User'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Create a user
-      tags:
-      - users
   /users/{id}:
     delete:
       description: Removes user and cleans their many-to-many associations
@@ -396,19 +435,19 @@ paths:
     put:
       consumes:
       - application/json
-      description: Updates user details by ID
+      description: Updates username and/or password
       parameters:
       - description: User ID
         in: path
         name: id
         required: true
         type: string
-      - description: Updated User Data
+      - description: Fields to update
         in: body
         name: user
         required: true
         schema:
-          $ref: '#/definitions/models.User'
+          $ref: '#/definitions/handler.UpdateUserRequest'
       produces:
       - application/json
       responses:
@@ -437,4 +476,378 @@ paths:
       summary: Update a user
       tags:
       - users
+  /users/{id}/blocked-news/{stopThemeId}:
+    get:
+      description: Returns news from user's channels blocked by a specific stop-theme,
+        grouped by duplicates.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Stop Theme ID
+        in: path
+        name: stopThemeId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.NewsGroup'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user's blocked news
+      tags:
+      - user-news
+  /users/{id}/channels:
+    get:
+      description: Returns all channels the user is subscribed to
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Channel'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user channels
+      tags:
+      - user-channels
+    post:
+      consumes:
+      - application/json
+      description: Subscribes the user to a channel. Creates the channel if it doesn't
+        exist.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Channel data (Link and Name)
+        in: body
+        name: channel
+        required: true
+        schema:
+          $ref: '#/definitions/models.Channel'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Channel'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Add channel to user
+      tags:
+      - user-channels
+  /users/{id}/channels/{channelId}:
+    delete:
+      description: Unsubscribes the user from a channel. Deletes the channel if no
+        other users are subscribed.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Channel ID
+        in: path
+        name: channelId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Remove channel from user
+      tags:
+      - user-channels
+  /users/{id}/news:
+    get:
+      description: Returns news feed grouped by duplicates. Excludes stop-themed news.
+        Optional filter by topic_id.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Filter by topic ID
+        in: query
+        name: topic_id
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/handler.NewsGroup'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user news feed
+      tags:
+      - user-news
+  /users/{id}/stop-themes:
+    get:
+      description: Returns all stop themes the user has configured
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.StopTheme'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user stop themes
+      tags:
+      - user-stop-themes
+    post:
+      consumes:
+      - application/json
+      description: Adds a stop theme to the user's filter list. Creates the stop theme
+        if it doesn't exist.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: StopTheme data (Name)
+        in: body
+        name: stopTheme
+        required: true
+        schema:
+          $ref: '#/definitions/models.StopTheme'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.StopTheme'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Add stop theme to user
+      tags:
+      - user-stop-themes
+  /users/{id}/stop-themes/{stopThemeId}:
+    delete:
+      description: Removes a stop theme from the user's filter list. Deletes the stop
+        theme if no other users use it.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: StopTheme ID
+        in: path
+        name: stopThemeId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Remove stop theme from user
+      tags:
+      - user-stop-themes
+  /users/{id}/topics:
+    get:
+      description: Returns all topics (categories) the user is subscribed to
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/models.Topic'
+            type: array
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Get user topics
+      tags:
+      - user-topics
+    post:
+      consumes:
+      - application/json
+      description: Subscribes the user to a topic. Creates the topic if it doesn't
+        exist.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Topic data (Name)
+        in: body
+        name: topic
+        required: true
+        schema:
+          $ref: '#/definitions/models.Topic'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/models.Topic'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Add topic to user
+      tags:
+      - user-topics
+  /users/{id}/topics/{topicId}:
+    delete:
+      description: Unsubscribes the user from a topic. Deletes the topic if no other
+        users are subscribed.
+      parameters:
+      - description: User ID
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Topic ID
+        in: path
+        name: topicId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Remove topic from user
+      tags:
+      - user-topics
 swagger: "2.0"

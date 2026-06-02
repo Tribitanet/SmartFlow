@@ -7,30 +7,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// @Summary Create a user
-// @Description Registers a new user
-// @Tags users
-// @Accept json
-// @Produce json
-// @Param user body models.User true "User Data"
-// @Success 200 {object} models.User
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Router /users [post]
-func (h *Handler) createUser(c *gin.Context) {
-	var user models.User
-	if err := c.ShouldBindJSON(&user); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-		return
-	}
-
-	if err := h.DB.Create(&user).Error; err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, user)
-}
 
 // @Summary Get a user
 // @Description Retrieves user information by ID
@@ -92,13 +68,19 @@ func (h *Handler) deleteUser(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{"message": "User deleted"})
 }
 
+// UpdateUserRequest — тело запроса для обновления профиля
+type UpdateUserRequest struct {
+	Username string `json:"username"`
+	Password string `json:"password"`
+}
+
 // @Summary Update a user
-// @Description Updates user details by ID
+// @Description Updates username and/or password
 // @Tags users
 // @Accept json
 // @Produce json
 // @Param id path string true "User ID"
-// @Param user body models.User true "Updated User Data"
+// @Param user body UpdateUserRequest true "Fields to update"
 // @Success 200 {object} models.User
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
@@ -117,13 +99,33 @@ func (h *Handler) updateUser(c *gin.Context) {
 		return
 	}
 
-	var input models.User
+	var input UpdateUserRequest
 	if err := c.ShouldBindJSON(&input); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	if err := h.DB.Model(&user).Updates(input).Error; err != nil {
+	updates := make(map[string]interface{})
+
+	if input.Username != "" {
+		updates["username"] = input.Username
+	}
+
+	if input.Password != "" {
+		hashed, err := hashPassword(input.Password)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to hash password"})
+			return
+		}
+		updates["password"] = hashed
+	}
+
+	if len(updates) == 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "No fields to update"})
+		return
+	}
+
+	if err := h.DB.Model(&user).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

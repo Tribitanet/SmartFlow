@@ -5,8 +5,7 @@ import "time"
 type User struct {
 	ID         uint         `gorm:"primarykey; autoIncrement:true"`
 	Username   string       `gorm:"unique;not null"`
-	Password   string       `gorm:"not null"`
-	Email      string       `gorm:"unique"`
+	Password   string       `gorm:"not null" json:"-"`
 	Channels   []*Channel   `gorm:"many2many:user_channels;"`
 	Topics     []*Topic     `gorm:"many2many:user_topics;"`
 	StopThemes []*StopTheme `gorm:"many2many:user_stop_themes;"`
