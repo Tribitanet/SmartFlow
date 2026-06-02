@@ -187,6 +187,7 @@ func (h *Handler) createUser(c *gin.Context) {
 		return
 	}
 
+	//TODO сделать так чтобы не структура юзера, возращалась
 	user := models.User{
 		Username: input.Username,
 		Password: hashedPassword,

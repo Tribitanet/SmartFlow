@@ -9,8 +9,8 @@ import (
 
 	_ "smartFlow/services/backend/docs"
 
-	ginSwagger "github.com/swaggo/gin-swagger"
 	swaggerFiles "github.com/swaggo/files"
+	ginSwagger "github.com/swaggo/gin-swagger"
 )
 
 type Handler struct {
@@ -23,7 +23,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	// Загрузка HTML-шаблонов
 	_, b, _, _ := runtime.Caller(0)
 	basePath := filepath.Dir(b)
-	templatesPath := filepath.Join(basePath, "..", "..", "web", "templates", "*")
+	templatesPath := filepath.Join(basePath, "..", "..", "web", "pages", "*")
 	router.LoadHTMLGlob(templatesPath)
 
 	// Главная страница (фронтенд)
