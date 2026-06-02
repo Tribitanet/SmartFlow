@@ -11,6 +11,7 @@ import (
 	"smartFlow/internal/models"
 	"smartFlow/services/cron/internal/deduplicate/deduplicate"
 	"smartFlow/services/cron/internal/deduplicate/vectordb"
+	"smartFlow/services/cron/internal/parse"
 	"smartFlow/services/cron/internal/stopthemes"
 	"smartFlow/services/cron/internal/topics"
 
@@ -89,7 +90,7 @@ func main() {
 
 	//дедупликация
 	_, err = scheduler.NewJob(
-		gocron.DurationJob(10 * time.Second),
+		gocron.DurationJob(10*time.Second),
 		gocron.NewTask(deduplicate.CronDeduplicateTask, db, client, ctx),
 	)
 	if err != nil {
@@ -98,7 +99,7 @@ func main() {
 
 	//Темы
 	_, err = scheduler.NewJob(
-		gocron.DurationJob(10 * time.Second),
+		gocron.DurationJob(10*time.Second),
 		gocron.NewTask(topics.CronTopicsTask, db),
 	)
 	if err != nil {
@@ -107,14 +108,20 @@ func main() {
 
 	//Стоп-темы
 	_, err = scheduler.NewJob(
-		gocron.DurationJob(10 * time.Second),
+		gocron.DurationJob(10*time.Second),
 		gocron.NewTask(stopthemes.CronStopThemesTask, db),
 	)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	
+	_, err = scheduler.NewJob(
+		gocron.DurationJob(300*time.Second),
+		gocron.NewTask(parse.ParseTelegramChannels, db),
+	)
+	if err != nil {
+		log.Fatal(err)
+	}
 	scheduler.Start()
 
 	select {}
