@@ -8,16 +8,17 @@ import (
 )
 
 // @Summary Get user channels
-// @Description Returns all channels the user is subscribed to
+// @Description Returns all channels the authenticated user is subscribed to
 // @Tags user-channels
 // @Produce json
-// @Param id path string true "User ID"
 // @Success 200 {array} models.Channel
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/channels [get]
+// @Router /users/channels [get]
 func (h *Handler) getUserChannels(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -32,19 +33,20 @@ func (h *Handler) getUserChannels(c *gin.Context) {
 }
 
 // @Summary Add channel to user
-// @Description Subscribes the user to a channel. Creates the channel if it doesn't exist.
+// @Description Subscribes the authenticated user to a channel. Creates the channel if it doesn't exist.
 // @Tags user-channels
 // @Accept json
 // @Produce json
-// @Param id path string true "User ID"
 // @Param channel body models.Channel true "Channel data (Link and Name)"
 // @Success 200 {object} models.Channel
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/channels [post]
+// @Router /users/channels [post]
 func (h *Handler) addUserChannel(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -66,7 +68,6 @@ func (h *Handler) addUserChannel(c *gin.Context) {
 		}
 	}
 
-	// Добавляем связь пользователь-канал (если уже есть — GORM не дублирует)
 	if err := h.DB.Model(&user).Association("Channels").Append(&channel); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -76,17 +77,18 @@ func (h *Handler) addUserChannel(c *gin.Context) {
 }
 
 // @Summary Remove channel from user
-// @Description Unsubscribes the user from a channel. Deletes the channel if no other users are subscribed.
+// @Description Unsubscribes the authenticated user from a channel. Deletes the channel if no other users are subscribed.
 // @Tags user-channels
 // @Produce json
-// @Param id path string true "User ID"
 // @Param channelId path string true "Channel ID"
 // @Success 200 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/channels/{channelId} [delete]
+// @Router /users/channels/{channelId} [delete]
 func (h *Handler) removeUserChannel(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -115,5 +117,3 @@ func (h *Handler) removeUserChannel(c *gin.Context) {
 
 	c.JSON(http.StatusOK, gin.H{"message": "Channel removed from user"})
 }
-
-

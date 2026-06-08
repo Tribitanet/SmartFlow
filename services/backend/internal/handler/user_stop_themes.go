@@ -8,16 +8,17 @@ import (
 )
 
 // @Summary Get user stop themes
-// @Description Returns all stop themes the user has configured
+// @Description Returns all stop themes the authenticated user has configured
 // @Tags user-stop-themes
 // @Produce json
-// @Param id path string true "User ID"
 // @Success 200 {array} models.StopTheme
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/stop-themes [get]
+// @Router /users/stop-themes [get]
 func (h *Handler) getUserStopThemes(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -32,19 +33,20 @@ func (h *Handler) getUserStopThemes(c *gin.Context) {
 }
 
 // @Summary Add stop theme to user
-// @Description Adds a stop theme to the user's filter list. Creates the stop theme if it doesn't exist.
+// @Description Adds a stop theme to the authenticated user's filter list. Creates it if it doesn't exist.
 // @Tags user-stop-themes
 // @Accept json
 // @Produce json
-// @Param id path string true "User ID"
-// @Param stopTheme body models.StopTheme true "StopTheme data (Name)"
+// @Param stopTheme body object true "StopTheme data (name)"
 // @Success 200 {object} models.StopTheme
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/stop-themes [post]
+// @Router /users/stop-themes [post]
 func (h *Handler) addUserStopTheme(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -57,7 +59,6 @@ func (h *Handler) addUserStopTheme(c *gin.Context) {
 		return
 	}
 
-	// Ищем стоп-тему по имени, если не найдена — создаём
 	var stopTheme models.StopTheme
 	result := h.DB.Where("name = ?", input.Name).First(&stopTheme)
 	if result.Error != nil {
@@ -77,17 +78,18 @@ func (h *Handler) addUserStopTheme(c *gin.Context) {
 }
 
 // @Summary Remove stop theme from user
-// @Description Removes a stop theme from the user's filter list. Deletes the stop theme if no other users use it.
+// @Description Removes a stop theme from the authenticated user's filter list. Deletes it if no other users use it.
 // @Tags user-stop-themes
 // @Produce json
-// @Param id path string true "User ID"
 // @Param stopThemeId path string true "StopTheme ID"
 // @Success 200 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/stop-themes/{stopThemeId} [delete]
+// @Router /users/stop-themes/{stopThemeId} [delete]
 func (h *Handler) removeUserStopTheme(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -103,7 +105,6 @@ func (h *Handler) removeUserStopTheme(c *gin.Context) {
 		return
 	}
 
-	// Проверяем, есть ли ещё пользователи с этой стоп-темой
 	var usersCount int64
 	h.DB.Table("user_stop_themes").Where("stop_theme_id = ?", stopTheme.ID).Count(&usersCount)
 	if usersCount == 0 {

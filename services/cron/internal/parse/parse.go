@@ -104,6 +104,7 @@ func rssParsing(db *gorm.DB, channel models.Channel, targetURL string) {
 		db.Where(models.News{MessageLink: newsItem.MessageLink}).FirstOrCreate(&newsItem)
 	}
 }
+
 func CleanTextWithGomoji(input string, channelRe *regexp.Regexp) string {
 	if input == "" {
 		return ""
@@ -128,6 +129,7 @@ func CleanTextWithGomoji(input string, channelRe *regexp.Regexp) string {
 
 	return strings.TrimSpace(text)
 }
+
 func CleanHTML(htmlContent string) string {
 	p := bluemonday.StrictPolicy()
 
@@ -151,6 +153,7 @@ func CleanChannelName(name string) string {
 
 	return strings.TrimSpace(name)
 }
+
 func CreateChannelRegex(channelName string) (*regexp.Regexp, error) {
 	trimmed := strings.TrimSpace(channelName)
 	if trimmed == "" {

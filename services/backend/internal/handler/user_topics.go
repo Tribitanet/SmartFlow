@@ -8,16 +8,17 @@ import (
 )
 
 // @Summary Get user topics
-// @Description Returns all topics (categories) the user is subscribed to
+// @Description Returns all topics the authenticated user is subscribed to
 // @Tags user-topics
 // @Produce json
-// @Param id path string true "User ID"
 // @Success 200 {array} models.Topic
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/topics [get]
+// @Router /users/topics [get]
 func (h *Handler) getUserTopics(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -32,19 +33,20 @@ func (h *Handler) getUserTopics(c *gin.Context) {
 }
 
 // @Summary Add topic to user
-// @Description Subscribes the user to a topic. Creates the topic if it doesn't exist.
+// @Description Subscribes the authenticated user to a topic. Creates the topic if it doesn't exist.
 // @Tags user-topics
 // @Accept json
 // @Produce json
-// @Param id path string true "User ID"
-// @Param topic body models.Topic true "Topic data (Name)"
+// @Param topic body object true "Topic data (name)"
 // @Success 200 {object} models.Topic
 // @Failure 400 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/topics [post]
+// @Router /users/topics [post]
 func (h *Handler) addUserTopic(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -57,7 +59,6 @@ func (h *Handler) addUserTopic(c *gin.Context) {
 		return
 	}
 
-	// Ищем тему по имени, если не найдена — создаём
 	var topic models.Topic
 	result := h.DB.Where("name = ?", input.Name).First(&topic)
 	if result.Error != nil {
@@ -77,17 +78,18 @@ func (h *Handler) addUserTopic(c *gin.Context) {
 }
 
 // @Summary Remove topic from user
-// @Description Unsubscribes the user from a topic. Deletes the topic if no other users are subscribed.
+// @Description Unsubscribes the authenticated user from a topic. Deletes the topic if no other users are subscribed.
 // @Tags user-topics
 // @Produce json
-// @Param id path string true "User ID"
 // @Param topicId path string true "Topic ID"
 // @Success 200 {object} map[string]string
 // @Failure 404 {object} map[string]string
-// @Router /users/{id}/topics/{topicId} [delete]
+// @Router /users/topics/{topicId} [delete]
 func (h *Handler) removeUserTopic(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -103,7 +105,6 @@ func (h *Handler) removeUserTopic(c *gin.Context) {
 		return
 	}
 
-	// Проверяем, есть ли ещё пользователи с этой темой
 	var usersCount int64
 	h.DB.Table("user_topics").Where("topic_id = ?", topic.ID).Count(&usersCount)
 	if usersCount == 0 {

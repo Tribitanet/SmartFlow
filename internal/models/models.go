@@ -20,18 +20,18 @@ type Channel struct {
 }
 
 type News struct {
-	ID                uint         `gorm:"primarykey;autoIncrement:true"`
-	CreatedAt         time.Time    `gorm:"autoCreateTime"`
-	Body              string       `gorm:"not null"`
-	MessageLink       string       `gorm:"not null"`
-	ChannelID         uint         `gorm:"not null"`
-	Topics            []*Topic     `gorm:"many2many:news_topics;"`
-	StopThemes        []*StopTheme `gorm:"many2many:news_stop_themes;"`
-	Channel           Channel
-	Duplicates        []News `gorm:"many2many:news_duplicates;joinForeignKey:news_id;joinReferences:DuplicateID"`
-	WithoutTopics        bool
-	TopicsCheckedAt      *time.Time
-	StopThemesCheckedAt  *time.Time
+	ID                uint         `gorm:"primarykey;autoIncrement:true" json:"id"`
+	CreatedAt         time.Time    `gorm:"autoCreateTime" json:"created_at"`
+	Body              string       `gorm:"not null" json:"body"`
+	MessageLink       string       `gorm:"not null" json:"message_link"`
+	ChannelID         uint         `gorm:"not null" json:"channel_id"`
+	Topics            []*Topic     `gorm:"many2many:news_topics;" json:"topics"`
+	StopThemes        []*StopTheme `gorm:"many2many:news_stop_themes;" json:"stop_themes"`
+	Channel           Channel      `json:"channel"`
+	Duplicates        []News       `gorm:"many2many:news_duplicates;joinForeignKey:news_id;joinReferences:DuplicateID" json:"duplicates"`
+	WithoutTopics     bool         `json:"-"`
+	TopicsCheckedAt   *time.Time   `json:"-"`
+	StopThemesCheckedAt *time.Time `json:"-"`
 }
 
 type Topic struct {

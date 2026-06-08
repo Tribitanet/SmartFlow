@@ -222,7 +222,7 @@ func getStopThemesForNews(news SimpleNews, stopThemes []SimpleStopTheme) NewsWit
 		log.Fatal(err)
 	}
 
-	request.Header.Set("Authorization", "Bearer "+apiKey)
+	request.Header.Set("Authorization", "Bearer " + apiKey)
 	request.Header.Set("Content-Type", "application/json")
 
 	response, err := http.DefaultClient.Do(request)
@@ -309,8 +309,17 @@ func CronStopThemesTask(db *gorm.DB) {
 			return
 		}
 
-		log.Printf("Обработка %d новых новостей по %d стоп-темам", len(newNews), len(allStopThemes))
-		processNewsAgainstStopThemes(newNews, allStopThemes, db)
+		if len(allStopThemes) == 0 {
+			log.Println("Стоп-тем нет в БД, помечаем новости как проверенные")
+			now := time.Now()
+			for _, n := range newNews {
+				db.Model(&models.News{}).Where("id = ?", n.ID).
+					Update("stop_themes_checked_at", now)
+			}
+		} else {
+			log.Printf("Обработка %d новых новостей по %d стоп-темам", len(newNews), len(allStopThemes))
+			processNewsAgainstStopThemes(newNews, allStopThemes, db)
+		}
 	}
 
 	// Сценарий 2 + 3: Новые стоп-темы - прогнать СТАРЫЕ новости по новым стоп-темам

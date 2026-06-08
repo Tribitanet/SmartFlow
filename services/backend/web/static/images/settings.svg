@@ -28,7 +28,7 @@
     C8.57 4.775 9.2 4.42 9.88 4.163
     L10.325 2.093
     H13.675Z
-  " stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
+  " stroke="#a6adbf" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"
      transform="translate(0, 1.88)"/>
-  <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/>
+  <circle cx="12" cy="12" r="3" stroke="#a6adbf" stroke-width="1.5"/>
 </svg>

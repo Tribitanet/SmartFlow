@@ -11,7 +11,7 @@ import (
 	"smartFlow/internal/models"
 	"smartFlow/services/cron/internal/deduplicate/deduplicate"
 	"smartFlow/services/cron/internal/deduplicate/vectordb"
-	"smartFlow/services/cron/internal/parse"
+	//"smartFlow/services/cron/internal/parse"
 	"smartFlow/services/cron/internal/stopthemes"
 	"smartFlow/services/cron/internal/topics"
 
@@ -115,13 +115,13 @@ func main() {
 		log.Fatal(err)
 	}
 
-	_, err = scheduler.NewJob(
+	/*_, err = scheduler.NewJob(
 		gocron.DurationJob(300*time.Second),
 		gocron.NewTask(parse.ParseTelegramChannels, db),
 	)
 	if err != nil {
 		log.Fatal(err)
-	}
+	}*/
 	scheduler.Start()
 
 	select {}
