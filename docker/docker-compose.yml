@@ -20,6 +20,15 @@ services:
     ports: ["6333:6333", "6334:6334"]
     volumes:
       - qdrant_storage:/qdrant/storage
+ 
+  rsshub:
+    image: diygod/rsshub:latest
+    ports:
+      - "1200:1200"
+    environment:
+      NODE_ENV: production
+      CACHE_TYPE: memory # Можно заменить на redis, если добавите кэш
+    restart: always
 
   backend:
     image: smartflow-backend
@@ -47,6 +56,8 @@ services:
       database:
         condition: service_healthy
       qdrant:
+        condition: service_started
+      rsshub:
         condition: service_started
 
 volumes:
