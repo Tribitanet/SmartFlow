@@ -83,44 +83,26 @@ func main() {
 	//Cron
 	scheduler, err := gocron.NewScheduler()
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Scheduler creation error:", err)
 	}
-
 	defer scheduler.Shutdown()
 
-	//дедупликация
+	// Единый последовательный воркфлоу обработки новостей
 	_, err = scheduler.NewJob(
 		gocron.DurationJob(10*time.Second),
-		gocron.NewTask(deduplicate.CronDeduplicateTask, db, client, ctx),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
+		gocron.NewTask(func() {
+			parse.ParseTelegramChannels(db)
 
-	//Темы
-	_, err = scheduler.NewJob(
-		gocron.DurationJob(10*time.Second),
-		gocron.NewTask(topics.CronTopicsTask, db),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
+			deduplicate.CronDeduplicateTask(db, client, ctx)
 
-	//Стоп-темы
-	_, err = scheduler.NewJob(
-		gocron.DurationJob(10*time.Second),
-		gocron.NewTask(stopthemes.CronStopThemesTask, db),
-	)
-	if err != nil {
-		log.Fatal(err)
-	}
+			topics.CronTopicsTask(db)
 
-	_, err = scheduler.NewJob(
-		gocron.DurationJob(300*time.Second),
-		gocron.NewTask(parse.ParseTelegramChannels, db),
+			stopthemes.CronStopThemesTask(db)
+
+		}),
 	)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal("Job creation error:", err)
 	}
 	scheduler.Start()
 
