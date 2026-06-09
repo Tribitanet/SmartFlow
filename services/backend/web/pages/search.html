@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFlow — Поиск</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<nav class="sidebar">
+    <div class="sidebar__top">
+        <div class="sidebar__logo">N</div>
+        <div class="sidebar__spacer"></div>
+        <a href="/feed" class="sidebar__btn">
+            <img src="/static/images/news.svg" width="24" height="24">
+            <span>News</span>
+        </a>
+        <a href="/automate" class="sidebar__btn">
+            <img src="/static/images/automate.svg" width="24" height="24">
+            <span>Automate</span>
+        </a>
+        <a href="/search" class="sidebar__btn active">
+            <img src="/static/images/search.svg" width="24" height="24">
+            <span>Search</span>
+        </a>
+        <a href="/addfeed" class="sidebar__btn">
+            <img src="/static/images/addfeed.svg" width="24" height="24">
+            <span>Add feed</span>
+        </a>
+    </div>
+    <div class="sidebar__bottom">
+        <div class="sidebar__btn">
+            <img src="/static/images/settings.svg" width="24" height="24">
+            <span>Settings</span>
+        </div>
+        <div class="sidebar__spacer-sm"></div>
+        <div class="sidebar__avatar" id="user-avatar">АД</div>
+    </div>
+</nav>
+
+<!-- ===== CONTENT ===== -->
+<main class="main-content main-content--no-categories">
+    <div class="top-bar top-bar--wide">
+        <span class="top-bar__title">Поиск</span>
+    </div>
+    <div class="search-area">
+        <div class="empty-state">
+            <img src="/static/images/search-big.svg" width="48" height="48" style="color:#a6adbf;">
+            <span>Поиск скоро будет доступен</span>
+            <span style="font-size:12px;color:#a6adbf;">Эта функция находится в разработке</span>
+        </div>
+    </div>
+</main>
+
+</body>
+</html>

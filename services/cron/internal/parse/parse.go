@@ -175,6 +175,7 @@ func CleanTextWithGomoji(input string, channelRe *regexp.Regexp) string {
 
 	return strings.TrimSpace(text)
 }
+
 func CleanHTML(htmlContent string) string {
 	// 1. Создаем строгую политику (она удаляет абсолютно все теги)
 	p := bluemonday.StrictPolicy()
@@ -207,6 +208,7 @@ func CleanChannelName(name string) string {
 	// 5. Финальная очистка краев строки
 	return strings.TrimSpace(name)
 }
+
 func CreateChannelRegex(channelName string) (*regexp.Regexp, error) {
 	// 1. Очищаем имя от лишних пробелов по краям
 	trimmed := strings.TrimSpace(channelName)

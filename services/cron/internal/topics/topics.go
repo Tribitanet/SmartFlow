@@ -322,8 +322,17 @@ func CronTopicsTask(db *gorm.DB) {
 			return
 		}
 
-		log.Printf("Обработка %d новых новостей по %d темам", len(newNews), len(allTopics))
-		processNewsAgainstTopics(newNews, allTopics, db, true)
+		if len(allTopics) == 0 {
+			log.Println("Тем нет в БД, помечаем новости как проверенные без тем")
+			now := time.Now()
+			for _, n := range newNews {
+				db.Model(&models.News{}).Where("id = ?", n.ID).
+					Updates(map[string]interface{}{"topics_checked_at": now, "without_topics": true})
+			}
+		} else {
+			log.Printf("Обработка %d новых новостей по %d темам", len(newNews), len(allTopics))
+			processNewsAgainstTopics(newNews, allTopics, db, true)
+		}
 	}
 
 	// Сценарий 2 + 3: Новые темы - прогнать СТАРЫЕ новости по новым темам

@@ -26,8 +26,17 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	templatesPath := filepath.Join(basePath, "..", "..", "web", "pages", "*")
 	router.LoadHTMLGlob(templatesPath)
 
-	// Главная страница (фронтенд)
-	router.GET("/", h.indexPage)
+	// Раздача статических файлов (CSS, JS)
+	staticPath := filepath.Join(basePath, "..", "..", "web", "static")
+	router.Static("/static", staticPath)
+
+	// Страницы фронтенда
+	router.GET("/", h.feedPage)
+	router.GET("/feed", h.feedPage)
+	router.GET("/automate", h.automatePage)
+	router.GET("/search", h.searchPage)
+	router.GET("/addfeed", h.addfeedPage)
+	router.GET("/login", h.authPage)
 
 	// === Публичные маршруты (без авторизации) ===
 	auth := router.Group("/auth")
@@ -36,40 +45,38 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		auth.POST("/login", h.loginUser)
 	}
 
-	// === Защищённые маршруты (сюда позже добавится auth middleware) ===
-	// users.Use(AuthMiddleware())
+	// === Защищённые маршруты (auth middleware) ===
 	users := router.Group("/users")
+	users.Use(AuthMiddleware())
 	{
-		users.GET("/:id", h.getUser)
-		users.PUT("/:id", h.updateUser)
-		users.DELETE("/:id", h.deleteUser)
+		users.GET("/me", h.getUser)
+		users.PUT("/me", h.updateUser)
+		users.DELETE("/me", h.deleteUser)
 
 		// Каналы пользователя
-		users.GET("/:id/channels", h.getUserChannels)
-		users.POST("/:id/channels", h.addUserChannel)
-		users.DELETE("/:id/channels/:channelId", h.removeUserChannel)
+		users.GET("/channels", h.getUserChannels)
+		users.POST("/channels", h.addUserChannel)
+		users.DELETE("/channels/:channelId", h.removeUserChannel)
 
 		// Категории пользователя
-		users.GET("/:id/topics", h.getUserTopics)
-		users.POST("/:id/topics", h.addUserTopic)
-		users.DELETE("/:id/topics/:topicId", h.removeUserTopic)
+		users.GET("/topics", h.getUserTopics)
+		users.POST("/topics", h.addUserTopic)
+		users.DELETE("/topics/:topicId", h.removeUserTopic)
 
 		// Стоп-темы пользователя
-		users.GET("/:id/stop-themes", h.getUserStopThemes)
-		users.POST("/:id/stop-themes", h.addUserStopTheme)
-		users.DELETE("/:id/stop-themes/:stopThemeId", h.removeUserStopTheme)
+		users.GET("/stop-themes", h.getUserStopThemes)
+		users.POST("/stop-themes", h.addUserStopTheme)
+		users.DELETE("/stop-themes/:stopThemeId", h.removeUserStopTheme)
 
 		// Лента новостей пользователя
-		users.GET("/:id/news", h.getUserNews)
-		users.GET("/:id/blocked-news/:stopThemeId", h.getUserBlockedNews)
+		users.GET("/news", h.getUserNews)
+		users.GET("/blocked-news/:stopThemeId", h.getUserBlockedNews)
 	}
 
+	// Только чтение — запись делает крон через GORM напрямую
 	news := router.Group("/news")
 	{
 		news.GET("", h.getAllNews)
-		news.POST("", h.createNews)
-		news.DELETE("/:id", h.deleteNews)
-		news.DELETE("", h.deleteAllNews)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

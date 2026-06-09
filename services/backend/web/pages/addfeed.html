@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFlow — Каналы</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<nav class="sidebar">
+    <div class="sidebar__top">
+        <div class="sidebar__logo">N</div>
+        <div class="sidebar__spacer"></div>
+        <a href="/feed" class="sidebar__btn">
+            <img src="/static/images/news.svg" width="24" height="24">
+            <span>News</span>
+        </a>
+        <a href="/automate" class="sidebar__btn">
+            <img src="/static/images/automate.svg" width="24" height="24">
+            <span>Automate</span>
+        </a>
+        <a href="/search" class="sidebar__btn">
+            <img src="/static/images/search.svg" width="24" height="24">
+            <span>Search</span>
+        </a>
+        <a href="/addfeed" class="sidebar__btn active">
+            <img src="/static/images/addfeed.svg" width="24" height="24">
+            <span>Add feed</span>
+        </a>
+    </div>
+    <div class="sidebar__bottom">
+        <div class="sidebar__btn">
+            <img src="/static/images/settings.svg" width="24" height="24">
+            <span>Settings</span>
+        </div>
+        <div class="sidebar__spacer-sm"></div>
+        <div class="sidebar__avatar" id="user-avatar">АД</div>
+    </div>
+</nav>
+
+<!-- ===== CONTENT ===== -->
+<main class="main-content main-content--no-categories">
+    <div class="top-bar top-bar--wide">
+        <span class="top-bar__title">Добавить Telegram канал</span>
+    </div>
+    <div class="addfeed-area">
+        <div class="addfeed-search">
+            <div class="addfeed-search__input-wrap">
+                <span class="addfeed-search__emoji">🔍</span>
+                <input type="text" class="addfeed-search__input" id="channel-search-input"
+                       placeholder="Вставьте ссылку на Telegram канал или @username...">
+            </div>
+            <span class="addfeed-search__hint">Например: @techcrunch_ru или https://t.me/techcrunch_ru</span>
+        </div>
+
+        <div class="channel-section">
+            <span class="channel-section__title">Популярные каналы</span>
+            <div class="channel-list" id="popular-channels">
+                <div class="channel-card">
+                    <div class="channel-card__info">
+                        <div class="channel-card__avatar"></div>
+                        <div class="channel-card__text">
+                            <span class="channel-card__name">TechCrunch RU</span>
+                            <span class="channel-card__desc">@techcrunch_ru · Технологические новости</span>
+                        </div>
+                    </div>
+                    <button class="btn-add-channel" onclick="addChannel('https://t.me/techcrunch_ru', 'TechCrunch RU')">+ Добавить</button>
+                </div>
+                <div class="channel-card">
+                    <div class="channel-card__info">
+                        <div class="channel-card__avatar"></div>
+                        <div class="channel-card__text">
+                            <span class="channel-card__name">РБК</span>
+                            <span class="channel-card__desc">@rbc_news · Деловые новости и аналитика</span>
+                        </div>
+                    </div>
+                    <button class="btn-add-channel" onclick="addChannel('https://t.me/rbc_news', 'РБК')">+ Добавить</button>
+                </div>
+                <div class="channel-card">
+                    <div class="channel-card__info">
+                        <div class="channel-card__avatar"></div>
+                        <div class="channel-card__text">
+                            <span class="channel-card__name">Хабр</span>
+                            <span class="channel-card__desc">@habr_com · IT, разработка, наука</span>
+                        </div>
+                    </div>
+                    <button class="btn-add-channel" onclick="addChannel('https://t.me/habr_com', 'Хабр')">+ Добавить</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="channel-section" style="padding-bottom: 40px;">
+            <span class="channel-section__title">Мои каналы</span>
+            <div class="channel-list" id="my-channels-list">
+                <div class="loading"><div class="loading__spinner"></div> Загрузка каналов...</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/addfeed.js"></script>
+</body>
+</html>

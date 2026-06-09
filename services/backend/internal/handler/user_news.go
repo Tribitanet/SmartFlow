@@ -103,15 +103,16 @@ func groupByDuplicates(newsList []models.News) []NewsGroup {
 // @Description Returns news feed grouped by duplicates. Excludes stop-themed news. Optional filter by topic_id.
 // @Tags user-news
 // @Produce json
-// @Param id path string true "User ID"
 // @Param topic_id query string false "Filter by topic ID"
 // @Success 200 {array} NewsGroup
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /users/{id}/news [get]
+// @Router /users/news [get]
 func (h *Handler) getUserNews(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.Preload("Channels").Preload("StopThemes").First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.Preload("Channels").Preload("StopThemes").First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}
@@ -163,15 +164,16 @@ func (h *Handler) getUserNews(c *gin.Context) {
 // @Description Returns news from user's channels blocked by a specific stop-theme, grouped by duplicates.
 // @Tags user-news
 // @Produce json
-// @Param id path string true "User ID"
 // @Param stopThemeId path string true "Stop Theme ID"
 // @Success 200 {array} NewsGroup
 // @Failure 404 {object} map[string]string
 // @Failure 500 {object} map[string]string
-// @Router /users/{id}/blocked-news/{stopThemeId} [get]
+// @Router /users/blocked-news/{stopThemeId} [get]
 func (h *Handler) getUserBlockedNews(c *gin.Context) {
+	userID := c.MustGet("user_id").(uint)
+
 	var user models.User
-	if err := h.DB.Preload("Channels").First(&user, c.Param("id")).Error; err != nil {
+	if err := h.DB.Preload("Channels").First(&user, userID).Error; err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "User not found"})
 		return
 	}

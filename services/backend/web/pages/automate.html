@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartFlow — Automate</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<nav class="sidebar">
+    <div class="sidebar__top">
+        <div class="sidebar__logo">N</div>
+        <div class="sidebar__spacer"></div>
+        <a href="/feed" class="sidebar__btn">
+            <img src="/static/images/news.svg" width="24" height="24">
+            <span>News</span>
+        </a>
+        <a href="/automate" class="sidebar__btn active">
+            <img src="/static/images/automate.svg" width="24" height="24">
+            <span>Automate</span>
+        </a>
+        <a href="/search" class="sidebar__btn">
+            <img src="/static/images/search.svg" width="24" height="24">
+            <span>Search</span>
+        </a>
+        <a href="/addfeed" class="sidebar__btn">
+            <img src="/static/images/addfeed.svg" width="24" height="24">
+            <span>Add feed</span>
+        </a>
+    </div>
+    <div class="sidebar__bottom">
+        <div class="sidebar__btn">
+            <img src="/static/images/settings.svg" width="24" height="24">
+            <span>Settings</span>
+        </div>
+        <div class="sidebar__spacer-sm"></div>
+        <div class="sidebar__avatar" id="user-avatar">АД</div>
+    </div>
+</nav>
+
+<!-- ===== CONTENT ===== -->
+<main class="main-content main-content--no-categories">
+    <div class="top-bar top-bar--wide">
+        <span class="top-bar__title">Automate</span>
+    </div>
+    <div class="automate-area">
+        <div class="automate-content" style="padding-bottom: 40px;">
+            <div class="automate-header">
+                <span class="automate-header__title">🚫 Стоп-темы</span>
+                <span class="automate-header__desc">Новости, содержащие стоп-темы, автоматически скрываются из вашей ленты. Добавьте слова или фразы, которые вы не хотите видеть.</span>
+            </div>
+
+            <div class="automate-form">
+                <input type="text" class="automate-form__input" id="stop-theme-input" placeholder="Введите стоп-тему...">
+                <button class="automate-form__btn" id="add-stop-theme-btn">+ Добавить</button>
+            </div>
+
+            <div class="automate-info">
+                <span class="automate-info__emoji">💡</span>
+                <span class="automate-info__text" id="automate-info-text">За последние 7 дней скрыто 0 новостей по вашим стоп-темам</span>
+            </div>
+
+            <div class="automate-divider"></div>
+
+            <div class="automate-section-header">
+                <span class="automate-section-header__title">Активные стоп-темы</span>
+                <span class="automate-section-header__count" id="stop-themes-count">0 тем</span>
+            </div>
+
+            <div class="stop-list" id="stop-themes-list">
+                <div class="loading"><div class="loading__spinner"></div> Загрузка стоп-тем...</div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<script src="/static/js/api.js"></script>
+<script src="/static/js/automate.js"></script>
+</body>
+</html>
