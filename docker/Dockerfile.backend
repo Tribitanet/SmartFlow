@@ -27,6 +27,7 @@ RUN --mount=type=cache,target=/go/pkg/mod \
 FROM alpine:latest
 WORKDIR /app
 COPY --from=builder /app/backend .
+COPY --from=builder /app/services/backend/web ./services/backend/web
 
 ENV PG_HOST=database
 ENV QDRANT_HOST=qdrant

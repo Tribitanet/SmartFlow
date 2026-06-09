@@ -71,6 +71,16 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		// Лента новостей пользователя
 		users.GET("/news", h.getUserNews)
 		users.GET("/blocked-news/:stopThemeId", h.getUserBlockedNews)
+
+		// Прочитанные новости
+		users.GET("/news/read", h.getReadNews)
+		users.POST("/news/:newsId/read", h.markNewsRead)
+		users.DELETE("/news/:newsId/read", h.unmarkNewsRead)
+
+		// Сохранённые новости
+		users.GET("/news/saved", h.getSavedNews)
+		users.POST("/news/:newsId/save", h.saveNews)
+		users.DELETE("/news/:newsId/save", h.unsaveNews)
 	}
 
 	// Только чтение — запись делает крон через GORM напрямую

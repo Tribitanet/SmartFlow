@@ -27,7 +27,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	err = db.AutoMigrate(&models.User{}, &models.News{}, &models.Topic{}, &models.StopTheme{})
+	err = db.AutoMigrate(&models.User{}, &models.News{}, &models.Topic{}, &models.StopTheme{}, &models.UserReadNews{}, &models.UserSavedNews{})
 	if err != nil {
 		log.Fatal(err)
 		os.Exit(1)

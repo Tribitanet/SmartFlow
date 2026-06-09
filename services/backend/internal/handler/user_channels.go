@@ -56,7 +56,7 @@ func (h *Handler) addUserChannel(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
+	
 	// Ищем канал по ссылке, если не найден — создаём
 	var channel models.Channel
 	result := h.DB.Where("link = ?", input.Link).First(&channel)

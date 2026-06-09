@@ -37,12 +37,18 @@ async function apiFetch(path, options = {}) {
         throw new Error('Unauthorized');
     }
 
+    const text = await res.text();
+
     if (!res.ok) {
-        const data = await res.json().catch(() => ({}));
-        throw new Error(data.error || 'Request failed');
+        let msg = 'Request failed';
+        if (text) {
+            try { msg = JSON.parse(text).error || msg; } catch(e) {}
+        }
+        throw new Error(msg);
     }
 
-    return res.json();
+    if (!text) return null;
+    return JSON.parse(text);
 }
 
 const api = {
@@ -119,6 +125,30 @@ const api = {
 
     getUserBlockedNews(stopThemeId) {
         return apiFetch('/users/blocked-news/' + stopThemeId);
+    },
+
+    getReadNews() {
+        return apiFetch('/users/news/read');
+    },
+
+    markNewsRead(newsId) {
+        return apiFetch('/users/news/' + newsId + '/read', { method: 'POST' });
+    },
+
+    unmarkNewsRead(newsId) {
+        return apiFetch('/users/news/' + newsId + '/read', { method: 'DELETE' });
+    },
+
+    getSavedNews() {
+        return apiFetch('/users/news/saved');
+    },
+
+    saveNews(newsId) {
+        return apiFetch('/users/news/' + newsId + '/save', { method: 'POST' });
+    },
+
+    unsaveNews(newsId) {
+        return apiFetch('/users/news/' + newsId + '/save', { method: 'DELETE' });
     },
 };
 

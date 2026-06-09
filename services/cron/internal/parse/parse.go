@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"smartFlow/internal/models"
 	"strings"
@@ -16,6 +17,14 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 	"gorm.io/gorm"
 )
+
+func getRSSHubHost() string {
+	host := os.Getenv("RSSHUB_HOST")
+	if host == "" {
+		host = "localhost"
+	}
+	return host
+}
 
 func convertTelegramToRSSHub(originalLink string) string {
 	link := strings.TrimSpace(originalLink)
@@ -28,7 +37,7 @@ func convertTelegramToRSSHub(originalLink string) string {
 	if link == "" {
 		return ""
 	}
-	return fmt.Sprintf("http://localhost:1200/telegram/channel/%s", link)
+	return fmt.Sprintf("http://%s:1200/telegram/channel/%s", getRSSHubHost(), link)
 }
 
 func ParseTelegramChannels(db *gorm.DB) {
