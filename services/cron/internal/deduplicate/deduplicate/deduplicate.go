@@ -5,6 +5,7 @@ import (
 	"log"
 	"smartFlow/internal/models"
 	"smartFlow/services/cron/internal/deduplicate/embedding"
+	"time"
 
 	"github.com/qdrant/go-client/qdrant"
 	"gorm.io/gorm"
@@ -17,7 +18,7 @@ type SimpleNews struct {
 
 func getRemainingNews(db *gorm.DB) ([]SimpleNews, error) {
 	var news []models.News
-	err := db.Joins("LEFT JOIN news_duplicates ON news.id = news_duplicates.news_id").Where("news_duplicates.news_id IS NULL").Find(&news).Error
+	err := db.Where("deduplication_checked_at IS NULL").Find(&news).Error
 	if err != nil {
 		return nil, err
 	}
@@ -128,6 +129,9 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 			log.Printf("Найден дубликат! ID: %d <-> %d, Скор схожести: %f", point.Id.GetNum(), simPoint.Id.GetNum(), simPoint.Score)
 			addDuplicate(db, uint(simPoint.Id.GetNum()), uint(point.Id.GetNum()))
 		}
+
+		now := time.Now()
+		db.Model(&models.News{}).Where("id = ?", point.Id.GetNum()).Update("deduplication_checked_at", now)
 	}
 	log.Println("Дубликаты обновлены")
 }

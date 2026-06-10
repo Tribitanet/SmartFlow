@@ -32,6 +32,7 @@ type News struct {
 	WithoutTopics     bool         `json:"-"`
 	TopicsCheckedAt   *time.Time   `json:"-"`
 	StopThemesCheckedAt *time.Time `json:"-"`
+	DeduplicationCheckedAt *time.Time `json:"-"`
 }
 
 type Topic struct {
@@ -46,4 +47,18 @@ type StopTheme struct {
 	Name string  `gorm:"not null"`
 	News []*News `gorm:"many2many:news_stop_themes;"`
 	CreatedAt time.Time `gorm:"autoCreateTime"`
+}
+
+type UserReadNews struct {
+	ID     uint      `gorm:"primarykey;autoIncrement:true"`
+	UserID uint      `gorm:"not null;index"`
+	NewsID uint      `gorm:"not null;index"`
+	ReadAt time.Time `gorm:"autoCreateTime"`
+}
+
+type UserSavedNews struct {
+	ID      uint      `gorm:"primarykey;autoIncrement:true"`
+	UserID  uint      `gorm:"not null;index"`
+	NewsID  uint      `gorm:"not null;index"`
+	SavedAt time.Time `gorm:"autoCreateTime"`
 }

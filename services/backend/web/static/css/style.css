@@ -483,6 +483,210 @@ input { font-family: inherit; outline: none; border: none; }
 
 .news-card__more:hover { color: #14171f; }
 
+/* Card read/saved state */
+.news-card--read {
+    opacity: 0.55;
+}
+.news-card--read:hover {
+    opacity: 1;
+}
+
+.card-action-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    background: none;
+    border: none;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.12s;
+}
+.card-action-btn:hover { opacity: 1; }
+.card-action-btn.active { opacity: 1; }
+
+/* ===== NEWS DETAIL MODAL ===== */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-card {
+    background: #fff;
+    width: 640px;
+    max-height: 80vh;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+}
+
+.modal-meta {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.modal-source {
+    font-size: 13px;
+    font-weight: 500;
+    color: #3878e0;
+}
+
+.modal-time {
+    font-size: 13px;
+    font-weight: 400;
+    color: #737a8a;
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background: #f5f6f9;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #737a8a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s;
+}
+.modal-close:hover { background: #e5e8ed; }
+
+.modal-divider {
+    height: 1px;
+    background: #e5e8ed;
+}
+
+.modal-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #14171f;
+    line-height: 28px;
+    margin: 0;
+}
+
+.modal-text {
+    font-size: 14px;
+    font-weight: 400;
+    color: #474d59;
+    line-height: 22px;
+    white-space: pre-wrap;
+}
+
+.modal-tag {
+    display: inline-flex;
+    align-self: flex-start;
+    padding: 4px 10px;
+    background: #ebf2ff;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #3878e0;
+}
+
+.modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 24px;
+}
+
+.modal-actions {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.modal-action-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: #737a8a;
+    padding: 0;
+    transition: color 0.12s;
+}
+.modal-action-btn:hover { color: #14171f; }
+.modal-action-btn.active { color: #3878e0; }
+
+.modal-dup-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.modal-dup-badge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px;
+    background: #ebf2ff;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #3878e0;
+}
+
+.modal-dup-arrow {
+    width: 19px;
+    height: 19px;
+    border-radius: 6px;
+    background: #f5f6f9;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    color: #737a8a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.12s;
+    padding: 0;
+}
+.modal-dup-arrow:hover { background: #e5e8ed; }
+
+.modal-link-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 16px;
+    background: #3878e0;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.12s;
+}
+.modal-link-btn:hover { background: #2d63c0; }
+
 /* ===== ADD FEED VIEW ===== */
 .addfeed-area {
     flex: 1;

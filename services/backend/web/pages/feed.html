@@ -64,6 +64,50 @@
     </div>
 </main>
 
+<!-- ===== NEWS DETAIL MODAL ===== -->
+<div class="modal-overlay" id="news-modal" style="display:none;">
+    <div class="modal-card">
+        <!-- Header -->
+        <div class="modal-header">
+            <div class="modal-meta">
+                <span class="modal-source" id="modal-source"></span>
+                <span class="modal-time" id="modal-time"></span>
+            </div>
+            <button class="modal-close" id="modal-close-btn">&times;</button>
+        </div>
+        <div class="modal-divider"></div>
+        <!-- Body -->
+        <div class="modal-body">
+            <h2 class="modal-title" id="modal-title"></h2>
+            <div class="modal-text" id="modal-text"></div>
+            <div class="modal-tag" id="modal-tag" style="display:none;"></div>
+        </div>
+        <div class="modal-divider"></div>
+        <!-- Footer -->
+        <div class="modal-footer">
+            <div class="modal-actions">
+                <button class="modal-action-btn" id="modal-save-btn">
+                    <img src="/static/images/bookmark.svg" width="14" height="14" id="modal-save-icon">
+                    <span>Сохранить</span>
+                </button>
+                <button class="modal-action-btn" id="modal-read-btn">
+                    <img src="/static/images/eye.svg" width="14" height="14">
+                    <span>Прочитано</span>
+                </button>
+                <div class="modal-dup-group" id="modal-dup-group" style="display:none;">
+                    <div class="modal-dup-badge" id="modal-dup-badge">
+                        <img src="/static/images/stack.svg" width="12" height="12">
+                        <span id="modal-dup-count"></span>
+                    </div>
+                    <button class="modal-dup-arrow" id="modal-dup-prev">&#8249;</button>
+                    <button class="modal-dup-arrow" id="modal-dup-next">&#8250;</button>
+                </div>
+            </div>
+            <a class="modal-link-btn" id="modal-link" href="#" target="_blank">Открыть в Telegram →</a>
+        </div>
+    </div>
+</div>
+
 <script src="/static/js/api.js"></script>
 <script src="/static/js/feed.js"></script>
 </body>
