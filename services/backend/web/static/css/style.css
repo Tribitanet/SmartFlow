@@ -321,11 +321,17 @@ input { font-family: inherit; outline: none; border: none; }
     border: 1px solid #e5e8ed;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     padding: 0 24px;
     flex-shrink: 0;
 }
 
 .top-bar--wide { padding: 0 32px; }
+
+.top-bar__left {
+    display: flex;
+    align-items: center;
+}
 
 .top-bar__title {
     font-size: 18px;
@@ -338,6 +344,32 @@ input { font-family: inherit; outline: none; border: none; }
     font-weight: 400;
     color: #737a8a;
     margin-left: 6px;
+}
+
+/* Read/Unread toggle */
+.read-toggle {
+    display: flex;
+    background: #f5f6f9;
+    border-radius: 8px;
+    padding: 2px;
+}
+
+.read-toggle__btn {
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #737a8a;
+    background: none;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.read-toggle__btn.active {
+    background: #fff;
+    color: #14171f;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
 }
 
 /* ===== NEWS GRID ===== */
@@ -599,8 +631,13 @@ input { font-family: inherit; outline: none; border: none; }
 }
 
 .modal-tag {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.modal-tag__item {
     display: inline-flex;
-    align-self: flex-start;
     padding: 4px 10px;
     background: #ebf2ff;
     border-radius: 6px;

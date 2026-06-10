@@ -54,8 +54,14 @@
 <!-- ===== CONTENT ===== -->
 <main class="main-content">
     <div class="top-bar">
-        <span class="top-bar__title" id="news-topic-title">Все новости</span>
-        <span class="top-bar__count" id="news-topic-count"></span>
+        <div class="top-bar__left">
+            <span class="top-bar__title" id="news-topic-title">Все новости</span>
+            <span class="top-bar__count" id="news-topic-count"></span>
+        </div>
+        <div class="read-toggle" id="read-toggle">
+            <button class="read-toggle__btn active" data-filter="unread">Непрочитанные</button>
+            <button class="read-toggle__btn" data-filter="read">Прочитанные</button>
+        </div>
     </div>
     <div class="news-area">
         <div class="news-grid" id="news-grid">
@@ -91,7 +97,7 @@
                     <span>Сохранить</span>
                 </button>
                 <button class="modal-action-btn" id="modal-read-btn">
-                    <img src="/static/images/eye.svg" width="14" height="14">
+                    <img src="/static/images/eye.svg" width="14" height="14" id="modal-read-icon">
                     <span>Прочитано</span>
                 </button>
                 <div class="modal-dup-group" id="modal-dup-group" style="display:none;">

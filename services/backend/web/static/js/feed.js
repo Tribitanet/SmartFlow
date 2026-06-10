@@ -2,9 +2,11 @@
 let currentTopicId = null;
 let topicsCache = [];
 let newsCache = [];
+let allNewsGroups = []; // full unfiltered list for badge counting
 let editMode = false;
 let readSet = new Set();
 let savedSet = new Set();
+let readFilter = 'unread'; // 'unread' | 'read'
 
 /* ===== ICON PATHS ===== */
 const ICO = '/static/images/';
@@ -32,16 +34,36 @@ function renderCategories() {
 
     // General / Newsfeed — always visible, not deletable
     if (!editMode) {
+        const generalUnread = countUnread(null);
         html += `<div class="cat-item ${currentTopicId === null ? 'active' : ''}" onclick="selectTopic(null)">
             <div class="cat-newsfeed">
                 <span class="cat-newsfeed__label">General</span>
             </div>
-            <span class="cat-item__badge">${newsCache.length}</span>
+            ${generalUnread > 0 ? `<span class="cat-item__badge">${generalUnread}</span>` : ''}
         </div>`;
     } else {
         html += `<div class="cat-item">
             <div class="cat-newsfeed">
                 <span class="cat-newsfeed__label">General</span>
+            </div>
+        </div>`;
+    }
+
+    // Saved — always visible, not deletable
+    if (!editMode) {
+        const savedCount = savedSet.size;
+        html += `<div class="cat-item ${currentTopicId === 'saved' ? 'active' : ''}" onclick="selectTopic('saved')">
+            <div class="cat-newsfeed">
+                <img src="${ICO}bookmark-filled.svg" width="16" height="16">
+                <span class="cat-newsfeed__label">Сохранённые</span>
+            </div>
+            ${savedCount > 0 ? `<span class="cat-item__badge">${savedCount}</span>` : ''}
+        </div>`;
+    } else {
+        html += `<div class="cat-item">
+            <div class="cat-newsfeed">
+                <img src="${ICO}bookmark-filled.svg" width="16" height="16">
+                <span class="cat-newsfeed__label">Сохранённые</span>
             </div>
         </div>`;
     }
@@ -57,8 +79,10 @@ function renderCategories() {
             </div>`;
         } else {
             const isActive = currentTopicId === topic.ID;
+            const unread = countUnread(topic.ID);
             html += `<div class="cat-item ${isActive ? 'active' : ''}" onclick="selectTopic(${topic.ID})">
                 <span class="cat-item__name">${escapeHtml(topic.Name)}</span>
+                ${unread > 0 ? `<span class="cat-item__badge">${unread}</span>` : ''}
             </div>`;
         }
     }
@@ -129,16 +153,21 @@ async function confirmAddCategory() {
 async function toggleRead(newsId, btn) {
     const isRead = readSet.has(newsId);
     const card = btn.closest('.news-card');
+    const img = btn.querySelector('img');
     // Мгновенно обновляем UI
     if (isRead) {
         readSet.delete(newsId);
         btn.classList.remove('active');
         if (card) card.classList.remove('news-card--read');
+        if (img) img.src = ICO + 'eye.svg';
     } else {
         readSet.add(newsId);
         btn.classList.add('active');
         if (card) card.classList.add('news-card--read');
+        if (img) img.src = ICO + 'eye-filled.svg';
     }
+    renderCategories(); // обновляем бейджи непрочитанных
+    renderNews();       // убираем/добавляем карточку из текущего фильтра
     try {
         if (isRead) {
             await api.unmarkNewsRead(newsId);
@@ -151,11 +180,15 @@ async function toggleRead(newsId, btn) {
             readSet.add(newsId);
             btn.classList.add('active');
             if (card) card.classList.add('news-card--read');
+            if (img) img.src = ICO + 'eye-filled.svg';
         } else {
             readSet.delete(newsId);
             btn.classList.remove('active');
             if (card) card.classList.remove('news-card--read');
+            if (img) img.src = ICO + 'eye.svg';
         }
+        renderCategories();
+        renderNews();
         console.error('Failed to toggle read:', e);
     }
 }
@@ -173,6 +206,8 @@ async function toggleSaved(newsId, btn) {
         btn.classList.add('active');
         if (img) img.src = ICO + 'bookmark-filled.svg';
     }
+    renderCategories(); // обновляем счётчик сохранённых
+    if (currentTopicId === 'saved') renderNews(); // убираем карточку если unsave
     try {
         if (isSaved) {
             await api.unsaveNews(newsId);
@@ -190,6 +225,8 @@ async function toggleSaved(newsId, btn) {
             btn.classList.remove('active');
             if (img) img.src = ICO + 'bookmark.svg';
         }
+        renderCategories();
+        if (currentTopicId === 'saved') renderNews();
         console.error('Failed to toggle saved:', e);
     }
 }
@@ -208,12 +245,22 @@ async function loadReadSaved() {
     }
 }
 
+async function loadAllNews() {
+    try {
+        allNewsGroups = await api.getUserNews(null) || [];
+    } catch (e) {
+        allNewsGroups = [];
+    }
+}
+
 async function loadNews() {
     const grid = document.getElementById('news-grid');
     grid.innerHTML = '<div class="loading"><div class="loading__spinner"></div> Загрузка новостей...</div>';
 
     try {
-        newsCache = await api.getUserNews(currentTopicId) || [];
+        newsCache = currentTopicId === 'saved'
+            ? (await api.getSavedNews() || [])
+            : (await api.getUserNews(currentTopicId) || []);
         renderNews();
         updateNewsHeader();
         renderCategories();
@@ -222,12 +269,22 @@ async function loadNews() {
     }
 }
 
+function countUnread(topicId) {
+    const groups = topicId === null ? allNewsGroups : allNewsGroups.filter(g => {
+        const topics = g.main.topics || [];
+        return topics.some(t => t.id === topicId);
+    });
+    return groups.filter(g => !readSet.has(g.main.id)).length;
+}
+
 function updateNewsHeader() {
     const titleEl = document.getElementById('news-topic-title');
     const countEl = document.getElementById('news-topic-count');
 
     if (currentTopicId === null) {
         titleEl.textContent = 'Все новости';
+    } else if (currentTopicId === 'saved') {
+        titleEl.textContent = 'Сохранённые';
     } else {
         const topic = topicsCache.find(t => t.ID === currentTopicId);
         titleEl.textContent = topic ? topic.Name : 'Категория';
@@ -240,13 +297,23 @@ function updateNewsHeader() {
 function renderNews() {
     const grid = document.getElementById('news-grid');
 
-    if (newsCache.length === 0) {
-        grid.innerHTML = '<div class="empty-state"><span>Нет новостей</span><span style="font-size:12px;color:#a6adbf;">Добавьте каналы, чтобы получать новости</span></div>';
+    // Filter
+    let filtered = newsCache.filter(g => {
+        if (currentTopicId === 'saved' && !savedSet.has(g.main.id)) return false;
+        const isRead = readSet.has(g.main.id);
+        return readFilter === 'read' ? isRead : !isRead;
+    });
+
+    if (filtered.length === 0) {
+        const msg = currentTopicId === 'saved'
+            ? (readFilter === 'read' ? 'Нет прочитанных сохранённых' : 'Нет непрочитанных сохранённых')
+            : (readFilter === 'read' ? 'Нет прочитанных новостей' : 'Нет непрочитанных новостей');
+        grid.innerHTML = `<div class="empty-state"><span>${msg}</span></div>`;
         return;
     }
 
     let html = '';
-    for (const group of newsCache) {
+    for (const group of filtered) {
         const n = group.main;
         const dupCount = group.duplicate_count;
         const isRead = readSet.has(n.id);
@@ -271,7 +338,7 @@ function renderNews() {
                         <img src="${ICO}${isSaved ? 'bookmark-filled' : 'bookmark'}.svg" width="14" height="14">
                     </button>
                     <button class="card-action-btn${isRead ? ' active' : ''}" onclick="event.stopPropagation(); toggleRead(${n.id}, this)" title="Отметить прочитанным">
-                        <img src="${ICO}eye.svg" width="14" height="14">
+                        <img src="${ICO}${isRead ? 'eye-filled' : 'eye'}.svg" width="14" height="14">
                     </button>
                 </div>
             </div>
@@ -322,10 +389,10 @@ function renderModal() {
     document.getElementById('modal-title').textContent = n.body.length > 100 ? n.body.substring(0, 100) + '...' : n.body;
     document.getElementById('modal-text').textContent = n.body;
 
-    // Tag (topic)
+    // Tags (topics)
     const tagEl = document.getElementById('modal-tag');
     if (n.topics && n.topics.length > 0) {
-        tagEl.textContent = n.topics[0].name;
+        tagEl.innerHTML = n.topics.map(t => `<span class="modal-tag__item">${escapeHtml(t.name)}</span>`).join('');
         tagEl.style.display = '';
     } else {
         tagEl.style.display = 'none';
@@ -343,7 +410,9 @@ function renderModal() {
 
     // Read button state
     const readBtn = document.getElementById('modal-read-btn');
-    readBtn.classList.toggle('active', readSet.has(n.id));
+    const isReadNow = readSet.has(n.id);
+    readBtn.classList.toggle('active', isReadNow);
+    document.getElementById('modal-read-icon').src = ICO + (isReadNow ? 'eye-filled' : 'eye') + '.svg';
 
     // Duplicates
     const dupGroup = document.getElementById('modal-dup-group');
@@ -391,6 +460,9 @@ function modalToggleRead() {
     const n = modalDupIdx === -1 ? modalGroup.main : modalGroup.duplicates[modalDupIdx];
     const btn = document.getElementById('modal-read-btn');
     toggleRead(n.id, btn);
+    setTimeout(() => {
+        document.getElementById('modal-read-icon').src = ICO + (readSet.has(n.id) ? 'eye-filled' : 'eye') + '.svg';
+    }, 50);
 }
 
 // Event listeners
@@ -406,6 +478,16 @@ document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') closeNewsModal();
 });
 
+/* ===== READ TOGGLE ===== */
+document.getElementById('read-toggle').addEventListener('click', function(e) {
+    const btn = e.target.closest('.read-toggle__btn');
+    if (!btn) return;
+    readFilter = btn.dataset.filter;
+    this.querySelectorAll('.read-toggle__btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    renderNews();
+});
+
 /* ===== INIT ===== */
 (function() {
     if (!isLoggedIn()) {
@@ -416,7 +498,7 @@ document.addEventListener('keydown', function(e) {
     document.getElementById('user-avatar').textContent = username.substring(0, 2).toUpperCase();
 
     loadReadSaved().then(() => {
-        loadTopics();
+        loadAllNews().then(() => loadTopics());
         loadNews();
     });
 })();

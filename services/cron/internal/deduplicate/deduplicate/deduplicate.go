@@ -2,9 +2,9 @@ package deduplicate
 
 import (
 	"context"
-	"log"
 	"smartFlow/internal/models"
 	"smartFlow/services/cron/internal/deduplicate/embedding"
+	"smartFlow/services/cron/internal/logger"
 	"time"
 
 	"github.com/qdrant/go-client/qdrant"
@@ -24,7 +24,6 @@ func getRemainingNews(db *gorm.DB) ([]SimpleNews, error) {
 	}
 
 	var simpleNews []SimpleNews
-
 	for _, n := range news {
 		simpleNews = append(simpleNews, SimpleNews{
 			ID:   n.ID,
@@ -38,14 +37,14 @@ func getRemainingNews(db *gorm.DB) ([]SimpleNews, error) {
 func getQdrantPoints(news []SimpleNews) ([]*qdrant.PointStruct, error) {
 	var points []*qdrant.PointStruct
 	for _, n := range news {
-		embedding, err := embedding.GetEmbedding(n.Body)
+		emb, err := embedding.GetEmbedding(n.Body)
 		if err != nil {
 			return nil, err
 		}
 
 		point := &qdrant.PointStruct{
 			Id:      qdrant.NewIDNum(uint64(n.ID)),
-			Vectors: qdrant.NewVectors(embedding...),
+			Vectors: qdrant.NewVectors(emb...),
 		}
 
 		points = append(points, point)
@@ -62,8 +61,10 @@ func duplicateExists(tx *gorm.DB, newsID, duplicateID uint) bool {
 	return count > 0
 }
 
-func addDuplicate(db *gorm.DB, a, b uint) error {
-	return db.Transaction(func(tx *gorm.DB) error {
+// addDuplicate возвращает true если связь была записана (новая), false если уже существовала
+func addDuplicate(db *gorm.DB, a, b uint) (bool, error) {
+	var added bool
+	err := db.Transaction(func(tx *gorm.DB) error {
 		if duplicateExists(tx, a, b) {
 			return nil
 		}
@@ -86,52 +87,73 @@ func addDuplicate(db *gorm.DB, a, b uint) error {
 			return err
 		}
 
+		added = true
 		return nil
 	})
+	return added, err
 }
 
-
 func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context) {
+	logger.Section("Дедупликация")
+
 	remainingNews, err := getRemainingNews(db)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("Ошибка получения новостей: %v", err)
+		return
 	}
-	log.Printf("Новостей получено: %d", len(remainingNews))
+
+	if len(remainingNews) == 0 {
+		logger.Info("Нет новых новостей для обработки")
+		logger.Done("Дедупликация")
+		return
+	}
+
+	logger.Info("Новостей к обработке: %d", len(remainingNews))
 
 	points, err := getQdrantPoints(remainingNews)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error("Ошибка получения эмбеддингов: %v", err)
+		return
 	}
-	log.Printf("Эмбеддинги получены: %d", len(points))
 
-	
+	logger.Info("Эмбеддинги получены: %d", len(points))
+
 	for _, point := range points {
 		_, err = client.Upsert(ctx, &qdrant.UpsertPoints{
 			CollectionName: "news",
 			Points:         []*qdrant.PointStruct{point},
 		})
 		if err != nil {
-			log.Fatal(err)
+			logger.Error("Ошибка загрузки в Qdrant (ID=%d): %v", point.Id.GetNum(), err)
+			continue
 		}
 
 		response, err := client.GetPointsClient().Recommend(ctx, &qdrant.RecommendPoints{
 			CollectionName: "news",
-			Positive: []*qdrant.PointId{point.Id},
-			Limit: 100,
+			Positive:       []*qdrant.PointId{point.Id},
+			Limit:          100,
 			ScoreThreshold: qdrant.PtrOf(float32(0.79)),
 		})
 		if err != nil {
-			log.Fatal(err)
+			logger.Error("Ошибка поиска дубликатов (ID=%d): %v", point.Id.GetNum(), err)
+			continue
 		}
 
-		similarPoints := response.GetResult()
-		for _, simPoint := range similarPoints {
-			log.Printf("Найден дубликат! ID: %d <-> %d, Скор схожести: %f", point.Id.GetNum(), simPoint.Id.GetNum(), simPoint.Score)
-			addDuplicate(db, uint(simPoint.Id.GetNum()), uint(point.Id.GetNum()))
+		for _, simPoint := range response.GetResult() {
+			if simPoint.Id.GetNum() == point.Id.GetNum() {
+				continue
+			}
+			added, err := addDuplicate(db, uint(simPoint.Id.GetNum()), uint(point.Id.GetNum()))
+			if err != nil {
+				logger.Error("Ошибка записи дубликата: %v", err)
+			} else if added {
+				logger.Info("Дубликат: ID=%d <-> ID=%d (score=%.2f)", point.Id.GetNum(), simPoint.Id.GetNum(), simPoint.Score)
+			}
 		}
 
 		now := time.Now()
 		db.Model(&models.News{}).Where("id = ?", point.Id.GetNum()).Update("deduplication_checked_at", now)
 	}
-	log.Println("Дубликаты обновлены")
+
+	logger.Done("Дедупликация")
 }
