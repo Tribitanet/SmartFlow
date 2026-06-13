@@ -97,7 +97,7 @@ func rssParsing(db *gorm.DB, channel models.Channel, targetURL string) {
 		return
 	}
 	for i, item := range feed.Items {
-		if i >= 5 {
+		if i >= 10 {
 			break
 		}
 
