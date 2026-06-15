@@ -76,19 +76,34 @@ func groupByDuplicates(newsList []models.News) []NewsGroup {
 			continue
 		}
 
-		group := NewsGroup{
-			Main: newsToItem(n),
-		}
+		// Собираем все новости группы: текущую + её дубликаты
+		candidates := []models.News{n}
 		used[n.ID] = true
 
-		// Добавляем дубликаты, которые есть в нашей выборке
 		for _, dup := range n.Duplicates {
 			if used[dup.ID] {
 				continue
 			}
 			if dupNews, ok := newsMap[dup.ID]; ok {
-				group.Duplicates = append(group.Duplicates, newsToItem(dupNews))
+				candidates = append(candidates, dupNews)
 				used[dup.ID] = true
+			}
+		}
+
+		// Главная — самая старая (earliest CreatedAt)
+		oldest := 0
+		for i, c := range candidates {
+			if c.CreatedAt.Before(candidates[oldest].CreatedAt) {
+				oldest = i
+			}
+		}
+
+		group := NewsGroup{
+			Main: newsToItem(candidates[oldest]),
+		}
+		for i, c := range candidates {
+			if i != oldest {
+				group.Duplicates = append(group.Duplicates, newsToItem(c))
 			}
 		}
 

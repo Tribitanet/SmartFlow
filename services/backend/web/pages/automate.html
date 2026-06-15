@@ -48,7 +48,7 @@
     <div class="automate-area">
         <div class="automate-content" style="padding-bottom: 40px;">
             <div class="automate-header">
-                <span class="automate-header__title">🚫 Стоп-темы</span>
+                <span class="automate-header__title"><img src="/static/images/stopthemes.svg" width="20" height="20"> Стоп-темы</span>
                 <span class="automate-header__desc">Новости, содержащие стоп-темы, автоматически скрываются из вашей ленты. Добавьте слова или фразы, которые вы не хотите видеть.</span>
             </div>
 
@@ -57,14 +57,7 @@
                 <button class="automate-form__btn" id="add-stop-theme-btn">+ Добавить</button>
             </div>
 
-            <div class="automate-info">
-                <span class="automate-info__emoji">💡</span>
-                <span class="automate-info__text" id="automate-info-text">За последние 7 дней скрыто 0 новостей по вашим стоп-темам</span>
-            </div>
-
-            <div class="automate-divider"></div>
-
-            <div class="automate-section-header">
+<div class="automate-section-header">
                 <span class="automate-section-header__title">Активные стоп-темы</span>
                 <span class="automate-section-header__count" id="stop-themes-count">0 тем</span>
             </div>
@@ -75,6 +68,18 @@
         </div>
     </div>
 </main>
+
+<!-- ===== BLOCKED NEWS MODAL ===== -->
+<div class="modal-overlay" id="blocked-modal" style="display:none;">
+    <div class="modal-card">
+        <div class="modal-header">
+            <h2 class="modal-title" id="blocked-modal-title" style="font-size:16px;"></h2>
+            <button class="modal-close" id="blocked-modal-close">&times;</button>
+        </div>
+        <div class="modal-divider"></div>
+        <div class="modal-body" id="blocked-modal-body"></div>
+    </div>
+</div>
 
 <script src="/static/js/api.js"></script>
 <script src="/static/js/automate.js"></script>

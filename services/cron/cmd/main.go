@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"os"
 	"time"
@@ -11,6 +10,7 @@ import (
 	"smartFlow/internal/models"
 	"smartFlow/services/cron/internal/deduplicate/deduplicate"
 	"smartFlow/services/cron/internal/deduplicate/vectordb"
+	"smartFlow/services/cron/internal/logger"
 	"smartFlow/services/cron/internal/parse"
 	"smartFlow/services/cron/internal/stopthemes"
 	"smartFlow/services/cron/internal/topics"
@@ -45,7 +45,7 @@ func main() {
 	}
 
 	if exist {
-		fmt.Println("Коллекция уже существует")
+		log.Println("Коллекция Qdrant уже существует")
 	} else {
 		collection := qdrant.CreateCollection{
 			CollectionName: "news",
@@ -87,19 +87,18 @@ func main() {
 	}
 	defer scheduler.Shutdown()
 
-	// Единый последовательный воркфлоу обработки новостей
 	_, err = scheduler.NewJob(
 		gocron.DurationJob(10*time.Second),
 		gocron.NewTask(func() {
+			logger.Section("Парсинг")
 			parse.ParseTelegramChannels(db)
+			logger.Done("Парсинг")
 
 			deduplicate.CronDeduplicateTask(db, client, ctx)
-
 			topics.CronTopicsTask(db)
-
 			stopthemes.CronStopThemesTask(db)
-
 		}),
+		gocron.WithSingletonMode(gocron.LimitModeWait),
 	)
 	if err != nil {
 		log.Fatal("Job creation error:", err)

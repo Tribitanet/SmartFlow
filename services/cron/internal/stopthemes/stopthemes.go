@@ -3,11 +3,12 @@ package stopthemes
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"smartFlow/internal/models"
+	"smartFlow/services/cron/internal/logger"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -76,12 +77,14 @@ func init() {
 	}
 
 	if !loaded {
-		log.Fatal("Не удалось найти .env файл")
+		logger.Error("Не удалось найти .env файл")
+		os.Exit(1)
 	}
 
 	apiKey = os.Getenv("HF_TOPICS_TOKEN")
 	if apiKey == "" {
-		log.Fatal("HF_TOPICS_TOKEN not set in .env")
+		logger.Error("HF_TOPICS_TOKEN не задан в .env")
+		os.Exit(1)
 	}
 }
 
@@ -103,10 +106,7 @@ func getUnprocessedNews(db *gorm.DB) ([]SimpleNews, error) {
 
 	var simpleNews []SimpleNews
 	for _, n := range news {
-		simpleNews = append(simpleNews, SimpleNews{
-			ID:   n.ID,
-			Body: n.Body,
-		})
+		simpleNews = append(simpleNews, SimpleNews{ID: n.ID, Body: n.Body})
 	}
 	return simpleNews, nil
 }
@@ -120,10 +120,7 @@ func getProcessedNews(db *gorm.DB) ([]SimpleNews, error) {
 
 	var simpleNews []SimpleNews
 	for _, n := range news {
-		simpleNews = append(simpleNews, SimpleNews{
-			ID:   n.ID,
-			Body: n.Body,
-		})
+		simpleNews = append(simpleNews, SimpleNews{ID: n.ID, Body: n.Body})
 	}
 	return simpleNews, nil
 }
@@ -137,10 +134,7 @@ func getNewStopThemes(db *gorm.DB, since time.Time) ([]SimpleStopTheme, error) {
 
 	var simpleStopThemes []SimpleStopTheme
 	for _, st := range stopThemes {
-		simpleStopThemes = append(simpleStopThemes, SimpleStopTheme{
-			ID:   st.ID,
-			Name: st.Name,
-		})
+		simpleStopThemes = append(simpleStopThemes, SimpleStopTheme{ID: st.ID, Name: st.Name})
 	}
 	return simpleStopThemes, nil
 }
@@ -151,53 +145,56 @@ func getAllStopThemes(db *gorm.DB) ([]SimpleStopTheme, error) {
 
 	var simpleStopThemes []SimpleStopTheme
 	for _, st := range stopThemes {
-		simpleStopThemes = append(simpleStopThemes, SimpleStopTheme{
-			ID:   st.ID,
-			Name: st.Name,
-		})
+		simpleStopThemes = append(simpleStopThemes, SimpleStopTheme{ID: st.ID, Name: st.Name})
 	}
 	return simpleStopThemes, err
 }
 
 func processNewsAgainstStopThemes(news []SimpleNews, stopThemes []SimpleStopTheme, db *gorm.DB) {
 	for _, n := range news {
-		newsWithStopThemes := getStopThemesForNews(n, stopThemes)
-		filteredStopThemeIDs := filterStopThemes(newsWithStopThemes)
+		newsWithStopThemes, err := getStopThemesForNews(n, stopThemes)
+		if err != nil {
+			logger.Error("ID=%d: ошибка запроса к HuggingFace: %v", n.ID, err)
+			continue
+		}
 
+		filteredIDs := filterStopThemes(newsWithStopThemes)
 		now := time.Now()
 
-		if len(filteredStopThemeIDs) == 0 {
-			log.Printf("Новость ID=%d: стоп-тем не найдено", n.ID)
+		if len(filteredIDs) == 0 {
+			logger.Info("[SKIP] ID=%d: стоп-тем не найдено", n.ID)
 			db.Model(&models.News{}).Where("id = ?", n.ID).Update("stop_themes_checked_at", now)
 			continue
 		}
 
 		var stopThemeModels []*models.StopTheme
-		err := db.Where("id IN ?", filteredStopThemeIDs).Find(&stopThemeModels).Error
-		if err != nil {
-			log.Printf("Ошибка загрузки стоп-тем для новости ID=%d: %v", n.ID, err)
+		if err := db.Where("id IN ?", filteredIDs).Find(&stopThemeModels).Error; err != nil {
+			logger.Error("ID=%d: ошибка загрузки стоп-тем из БД: %v", n.ID, err)
 			continue
 		}
 
 		var newsModel models.News
-		err = db.First(&newsModel, n.ID).Error
-		if err != nil {
-			log.Printf("Новость ID=%d не найдена в БД: %v", n.ID, err)
+		if err := db.First(&newsModel, n.ID).Error; err != nil {
+			logger.Error("ID=%d: новость не найдена в БД: %v", n.ID, err)
 			continue
 		}
 
-		err = db.Model(&newsModel).Association("StopThemes").Append(stopThemeModels)
-		if err != nil {
-			log.Printf("Ошибка привязки стоп-тем к новости ID=%d: %v", n.ID, err)
+		if err := db.Model(&newsModel).Association("StopThemes").Append(stopThemeModels); err != nil {
+			logger.Error("ID=%d: ошибка привязки стоп-тем: %v", n.ID, err)
 			continue
 		}
 
 		db.Model(&models.News{}).Where("id = ?", n.ID).Update("stop_themes_checked_at", now)
-		log.Printf("Новость ID=%d: привязано %d стоп-тем", n.ID, len(stopThemeModels))
+
+		names := make([]string, 0, len(stopThemeModels))
+		for _, st := range stopThemeModels {
+			names = append(names, st.Name)
+		}
+		logger.Info("[BLOCKED] ID=%d: %v", n.ID, names)
 	}
 }
 
-func getStopThemesForNews(news SimpleNews, stopThemes []SimpleStopTheme) NewsWithStopThemes {
+func getStopThemesForNews(news SimpleNews, stopThemes []SimpleStopTheme) (NewsWithStopThemes, error) {
 	labels := make([]string, 0, len(stopThemes))
 	for _, st := range stopThemes {
 		labels = append(labels, st.Name)
@@ -214,80 +211,76 @@ func getStopThemesForNews(news SimpleNews, stopThemes []SimpleStopTheme) NewsWit
 
 	body, err := json.Marshal(payload)
 	if err != nil {
-		log.Fatal(err)
+		return NewsWithStopThemes{}, fmt.Errorf("marshal: %w", err)
 	}
 
 	request, err := http.NewRequest(http.MethodPost, apiURL, bytes.NewReader(body))
 	if err != nil {
-		log.Fatal(err)
+		return NewsWithStopThemes{}, fmt.Errorf("new request: %w", err)
 	}
 
-	request.Header.Set("Authorization", "Bearer " + apiKey)
+	request.Header.Set("Authorization", "Bearer "+apiKey)
 	request.Header.Set("Content-Type", "application/json")
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		log.Fatal(err)
+		return NewsWithStopThemes{}, fmt.Errorf("http: %w", err)
 	}
 	defer response.Body.Close()
 
 	responseBody, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal(err)
+		return NewsWithStopThemes{}, fmt.Errorf("read body: %w", err)
 	}
 
 	if response.StatusCode != http.StatusOK {
-		log.Fatalf("Hugging Face API error (status %d): %s", response.StatusCode, string(responseBody))
+		return NewsWithStopThemes{}, fmt.Errorf("HuggingFace API status %d: %s", response.StatusCode, string(responseBody))
 	}
 
 	var modelResponse ModelResponse
-
-	err = json.Unmarshal(responseBody, &modelResponse)
-	if err != nil {
-		log.Fatal(err)
+	if err := json.Unmarshal(responseBody, &modelResponse); err != nil {
+		return NewsWithStopThemes{}, fmt.Errorf("unmarshal: %w", err)
 	}
 
-	var newsWithStopThemes NewsWithStopThemes
-
+	var result NewsWithStopThemes
 	for i, label := range modelResponse.Labels {
-		stopThemeID := getIdByStopThemeName(stopThemes, label)
-		if stopThemeID != 0 {
-			newsWithStopThemes.StopThemes = append(newsWithStopThemes.StopThemes, StopThemeWithScore{
-				StopThemeID: stopThemeID,
+		id := getIdByStopThemeName(stopThemes, label)
+		if id != 0 {
+			result.StopThemes = append(result.StopThemes, StopThemeWithScore{
+				StopThemeID: id,
 				Score:       modelResponse.Scores[i],
 			})
 		}
 	}
 
-	return newsWithStopThemes
+	return result, nil
 }
 
 func filterStopThemes(newsWithStopThemes NewsWithStopThemes) []uint {
-	var filteredStopThemes []uint
+	var filtered []uint
 	for _, st := range newsWithStopThemes.StopThemes {
 		if st.Score > ScoreThreshold {
-			filteredStopThemes = append(filteredStopThemes, st.StopThemeID)
+			filtered = append(filtered, st.StopThemeID)
 		}
 	}
-	return filteredStopThemes
+	return filtered
 }
 
 func CronStopThemesTask(db *gorm.DB) {
+	logger.Section("Стоп-темы")
 	now := time.Now()
 
-	// 1. Новые новости (StopThemesCheckedAt IS NULL)
 	newNews, err := getUnprocessedNews(db)
 	if err != nil {
-		log.Printf("Ошибка получения необработанных новостей: %v", err)
+		logger.Error("Ошибка получения необработанных новостей: %v", err)
 		return
 	}
 
-	// 2. Новые стоп-темы (CreatedAt > lastProcessedTime). При первом запуске — пусто
 	var newStopThemes []SimpleStopTheme
 	if lastProcessedTime != nil {
 		newStopThemes, err = getNewStopThemes(db, *lastProcessedTime)
 		if err != nil {
-			log.Printf("Ошибка получения новых стоп-тем: %v", err)
+			logger.Error("Ошибка получения новых стоп-тем: %v", err)
 			return
 		}
 	}
@@ -296,44 +289,44 @@ func CronStopThemesTask(db *gorm.DB) {
 	hasNewStopThemes := len(newStopThemes) > 0
 
 	if !hasNewNews && !hasNewStopThemes {
-		log.Println("Нет новых новостей и стоп-тем, пропускаем")
+		logger.Info("Нет новых новостей и стоп-тем, пропускаем")
 		lastProcessedTime = &now
+		logger.Done("Стоп-темы")
 		return
 	}
 
-	// Сценарий 1 + 3: Новые новости - прогнать по ВСЕМ стоп-темам
+	// Новые новости — прогнать по всем стоп-темам
 	if hasNewNews {
 		allStopThemes, err := getAllStopThemes(db)
 		if err != nil {
-			log.Printf("Ошибка получения всех стоп-тем: %v", err)
+			logger.Error("Ошибка получения всех стоп-тем: %v", err)
 			return
 		}
 
 		if len(allStopThemes) == 0 {
-			log.Println("Стоп-тем нет в БД, помечаем новости как проверенные")
-			now := time.Now()
+			logger.Warn("Стоп-тем нет в БД, помечаем %d новостей как проверенные", len(newNews))
+			t := time.Now()
 			for _, n := range newNews {
-				db.Model(&models.News{}).Where("id = ?", n.ID).
-					Update("stop_themes_checked_at", now)
+				db.Model(&models.News{}).Where("id = ?", n.ID).Update("stop_themes_checked_at", t)
 			}
 		} else {
-			log.Printf("Обработка %d новых новостей по %d стоп-темам", len(newNews), len(allStopThemes))
+			logger.Info("Новых новостей: %d, стоп-тем: %d", len(newNews), len(allStopThemes))
 			processNewsAgainstStopThemes(newNews, allStopThemes, db)
 		}
 	}
 
-	// Сценарий 2 + 3: Новые стоп-темы - прогнать СТАРЫЕ новости по новым стоп-темам
+	// Новые стоп-темы — перепроверить старые новости
 	if hasNewStopThemes {
 		oldNews, err := getProcessedNews(db)
 		if err != nil {
-			log.Printf("Ошибка получения старых новостей: %v", err)
+			logger.Error("Ошибка получения старых новостей: %v", err)
 			lastProcessedTime = &now
 			return
 		}
-		log.Printf("Перепроверка %d старых новостей по %d новым стоп-темам", len(oldNews), len(newStopThemes))
+		logger.Info("Перепроверка %d старых новостей по %d новым стоп-темам", len(oldNews), len(newStopThemes))
 		processNewsAgainstStopThemes(oldNews, newStopThemes, db)
 	}
 
 	lastProcessedTime = &now
-	log.Println("CronStopThemesTask завершён")
+	logger.Done("Стоп-темы")
 }
