@@ -29,7 +29,8 @@ services:
       - "1200:1200"
     environment:
       NODE_ENV: production
-      CACHE_TYPE: memory # Можно заменить на redis, если добавите кэш
+      CACHE_TYPE: memory
+      CACHE_EXPIRE: 60
     restart: always
 
   backend:
