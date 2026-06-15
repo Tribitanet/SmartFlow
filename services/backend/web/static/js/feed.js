@@ -120,7 +120,7 @@ function showAddCategory() {
     const area = document.getElementById('cat-add-area');
     area.className = '';
     area.innerHTML = `<div class="cat-add-row">
-        <input type="text" class="cat-add-input" id="new-category-input" placeholder="Название...">
+        <input type="text" class="cat-add-input" id="new-category-input" placeholder="Название..." autocomplete="off">
         <div class="cat-add-confirm" onclick="confirmAddCategory()" title="Добавить">
             <img src="${ICO}checkmark.svg" width="14" height="14">
         </div>
@@ -132,6 +132,17 @@ function showAddCategory() {
     input.addEventListener('keydown', function(e) {
         if (e.key === 'Enter') confirmAddCategory();
         if (e.key === 'Escape') renderCategories();
+    });
+
+    function hideOnClickOutside(e) {
+        const row = document.querySelector('.cat-add-row');
+        if (!row || !row.contains(e.target)) {
+            document.removeEventListener('mousedown', hideOnClickOutside);
+            renderCategories();
+        }
+    }
+    requestAnimationFrame(() => {
+        document.addEventListener('mousedown', hideOnClickOutside);
     });
 }
 
@@ -232,14 +243,24 @@ async function toggleSaved(newsId, btn) {
 }
 
 /* ===== NEWS ===== */
+// Собирает ID всех новостей из групп (главная + дубликаты)
+function collectIds(groups) {
+    const ids = new Set();
+    for (const g of (groups || [])) {
+        if (g.main) ids.add(g.main.id);
+        for (const d of (g.duplicates || [])) ids.add(d.id);
+    }
+    return ids;
+}
+
 async function loadReadSaved() {
     try {
         const [readList, savedList] = await Promise.all([
             api.getReadNews(),
             api.getSavedNews(),
         ]);
-        readSet = new Set((readList || []).map(g => g.main.id));
-        savedSet = new Set((savedList || []).map(g => g.main.id));
+        readSet = collectIds(readList);
+        savedSet = collectIds(savedList);
     } catch (e) {
         // not critical — default to empty sets
     }
@@ -253,9 +274,11 @@ async function loadAllNews() {
     }
 }
 
-async function loadNews() {
+async function loadNews(silent) {
     const grid = document.getElementById('news-grid');
-    grid.innerHTML = '<div class="loading"><div class="loading__spinner"></div> Загрузка новостей...</div>';
+    if (!silent) {
+        grid.innerHTML = '<div class="loading"><div class="loading__spinner"></div> Загрузка новостей...</div>';
+    }
 
     try {
         newsCache = currentTopicId === 'saved'
@@ -265,15 +288,25 @@ async function loadNews() {
         updateNewsHeader();
         renderCategories();
     } catch (e) {
-        grid.innerHTML = '<div class="empty-state"><span>Не удалось загрузить новости</span></div>';
+        if (!silent) {
+            grid.innerHTML = '<div class="empty-state"><span>Не удалось загрузить новости</span></div>';
+        }
     }
 }
 
+// Проверяет, относится ли группа (главная ИЛИ любой дубликат) к теме
+function groupHasTopic(g, topicId) {
+    if ((g.main.topics || []).some(t => t.id === topicId)) return true;
+    for (const d of (g.duplicates || [])) {
+        if ((d.topics || []).some(t => t.id === topicId)) return true;
+    }
+    return false;
+}
+
 function countUnread(topicId) {
-    const groups = topicId === null ? allNewsGroups : allNewsGroups.filter(g => {
-        const topics = g.main.topics || [];
-        return topics.some(t => t.id === topicId);
-    });
+    const groups = topicId === null
+        ? allNewsGroups
+        : allNewsGroups.filter(g => groupHasTopic(g, topicId));
     return groups.filter(g => !readSet.has(g.main.id)).length;
 }
 
@@ -501,4 +534,16 @@ document.getElementById('read-toggle').addEventListener('click', function(e) {
         loadAllNews().then(() => loadTopics());
         loadNews();
     });
+
+    setInterval(async () => {
+        // Не мешаем, пока пользователь редактирует категории / открыта модалка
+        if (editMode || modalGroup) return;
+        try {
+            await loadReadSaved();
+            await loadAllNews();
+            await loadNews(true); // сам вызовет renderCategories
+        } catch (e) {
+            console.error('Poll error:', e);
+        }
+    }, 5000);
 })();

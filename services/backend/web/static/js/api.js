@@ -29,7 +29,7 @@ async function apiFetch(path, options = {}) {
         headers['Authorization'] = 'Bearer ' + token;
     }
 
-    const res = await fetch(API_BASE + path, { ...options, headers });
+    const res = await fetch(API_BASE + path, { cache: 'no-store', ...options, headers });
 
     if (res.status === 401) {
         clearAuth();
