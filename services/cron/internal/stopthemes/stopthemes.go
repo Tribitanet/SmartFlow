@@ -81,9 +81,9 @@ func init() {
 		os.Exit(1)
 	}
 
-	apiKey = os.Getenv("HF_TOPICS_TOKEN")
+	apiKey = os.Getenv("HF_STOPTHEMES_TOKEN")
 	if apiKey == "" {
-		logger.Error("HF_TOPICS_TOKEN не задан в .env")
+		logger.Error("HF_STOPTHEMES_TOKEN не задан в .env")
 		os.Exit(1)
 	}
 }

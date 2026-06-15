@@ -65,19 +65,16 @@ func main() {
 	err = database.CheckDB()
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 
 	db, err := database.Init(database.GetDSN())
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 
-	err = db.AutoMigrate(&models.User{}, &models.News{}, &models.Topic{}, &models.StopTheme{})
+	err = db.AutoMigrate(&models.User{}, &models.News{}, &models.Topic{}, &models.StopTheme{}, &models.Channel{})
 	if err != nil {
 		log.Fatal(err)
-		os.Exit(1)
 	}
 
 	//Cron
