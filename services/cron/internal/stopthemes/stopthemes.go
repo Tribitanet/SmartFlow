@@ -204,7 +204,7 @@ func getStopThemesForNews(news SimpleNews, stopThemes []SimpleStopTheme) (NewsWi
 		Inputs: news.Body,
 		Parameters: RequestParameters{
 			CandidateLabels:    labels,
-			HypothesisTemplate: "Этот текст можно классифицировать как: {}.",
+			HypothesisTemplate: "В этой новости речь идёт о: {}.",
 			MultiLabel:         true,
 		},
 	}

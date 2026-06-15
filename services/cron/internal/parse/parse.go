@@ -11,6 +11,7 @@ import (
 	"regexp"
 	"smartFlow/internal/models"
 	"strings"
+	"smartFlow/services/cron/internal/logger"
 
 	"github.com/SlyMarbo/rss/v2"
 	"github.com/forPelevin/gomoji"
@@ -103,7 +104,7 @@ func rssParsing(db *gorm.DB, channel models.Channel, targetURL string) {
 
 		reSystemMessage := regexp.MustCompile(`(?i)Channel\s+(created|updated|photo|description)`)
 		if reSystemMessage.MatchString(item.Title) {
-			log.Printf("[%s] Пропущено системное сообщение: %s", channel.Name, item.Title)
+			logger.Info("[%s] Пропущено системное сообщение: %s", channel.Name, item.Title)
 			continue
 		}
 		var link string
