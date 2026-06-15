@@ -3,10 +3,12 @@ package embedding
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"os"
+
+	"smartFlow/services/cron/internal/logger"
 
 	"github.com/joho/godotenv"
 )
@@ -40,12 +42,14 @@ func init() {
 	}
 
 	if !loaded {
-		log.Fatal("Не удалось найти .env файл")
+		logger.Error("Не удалось найти .env файл")
+		os.Exit(1)
 	}
 
 	apiKey = os.Getenv("JINA_API_KEY")
 	if apiKey == "" {
-		log.Fatal("JINA_API_KEY not set in .env")
+		logger.Error("JINA_API_KEY не задан в .env")
+		os.Exit(1)
 	}
 }
 
@@ -55,14 +59,12 @@ func GetEmbedding(text string) ([]float32, error) {
 		Input: []string{text},
 	})
 	if err != nil {
-		log.Fatal("Marshal error:", err)
-		return nil, err
+		return nil, fmt.Errorf("marshal: %w", err)
 	}
 
 	request, err := http.NewRequest("POST", "https://api.jina.ai/v1/embeddings", bytes.NewReader(requestBody))
 	if err != nil {
-		log.Fatal("Request error:", err)
-		return nil, err
+		return nil, fmt.Errorf("new request: %w", err)
 	}
 
 	request.Header.Set("Content-Type", "application/json")
@@ -70,31 +72,26 @@ func GetEmbedding(text string) ([]float32, error) {
 
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
-		log.Fatal("HTTP error:", err)
-		return nil, err
+		return nil, fmt.Errorf("http: %w", err)
 	}
 	defer response.Body.Close()
 
 	body, err := io.ReadAll(response.Body)
 	if err != nil {
-		log.Fatal("Read body error:", err)
-		return nil, err
+		return nil, fmt.Errorf("read body: %w", err)
 	}
 
 	if response.StatusCode != http.StatusOK {
-		log.Fatalf("Jina API error (status %d): %s", response.StatusCode, string(body))
-		return nil, err
+		return nil, fmt.Errorf("Jina API status %d: %s", response.StatusCode, string(body))
 	}
 
 	var jinaResp jinaResponse
 	if err := json.Unmarshal(body, &jinaResp); err != nil {
-		log.Fatal("Unmarshal error:", err)
-		return nil, err
+		return nil, fmt.Errorf("unmarshal: %w", err)
 	}
 
 	if len(jinaResp.Data) == 0 {
-		log.Fatal("Empty response from Jina API")
-		return nil, err
+		return nil, fmt.Errorf("пустой ответ от Jina API")
 	}
 
 	return jinaResp.Data[0].Embedding, nil

@@ -34,25 +34,6 @@ func getRemainingNews(db *gorm.DB) ([]SimpleNews, error) {
 	return simpleNews, nil
 }
 
-func getQdrantPoints(news []SimpleNews) ([]*qdrant.PointStruct, error) {
-	var points []*qdrant.PointStruct
-	for _, n := range news {
-		emb, err := embedding.GetEmbedding(n.Body)
-		if err != nil {
-			return nil, err
-		}
-
-		point := &qdrant.PointStruct{
-			Id:      qdrant.NewIDNum(uint64(n.ID)),
-			Vectors: qdrant.NewVectors(emb...),
-		}
-
-		points = append(points, point)
-	}
-
-	return points, nil
-}
-
 func duplicateExists(tx *gorm.DB, newsID, duplicateID uint) bool {
 	var count int64
 	tx.Table("news_duplicates").
@@ -61,7 +42,6 @@ func duplicateExists(tx *gorm.DB, newsID, duplicateID uint) bool {
 	return count > 0
 }
 
-// addDuplicate возвращает true если связь была записана (новая), false если уже существовала
 func addDuplicate(db *gorm.DB, a, b uint) (bool, error) {
 	var added bool
 	err := db.Transaction(func(tx *gorm.DB) error {
@@ -110,21 +90,25 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 
 	logger.Info("Новостей к обработке: %d", len(remainingNews))
 
-	points, err := getQdrantPoints(remainingNews)
-	if err != nil {
-		logger.Error("Ошибка получения эмбеддингов: %v", err)
-		return
-	}
+	for _, n := range remainingNews {
+		// Получаем эмбеддинг — если ошибка, пропускаем (не помечаем как обработанную)
+		emb, err := embedding.GetEmbedding(n.Body)
+		if err != nil {
+			logger.Error("ID=%d: ошибка эмбеддинга: %v", n.ID, err)
+			continue
+		}
 
-	logger.Info("Эмбеддинги получены: %d", len(points))
+		point := &qdrant.PointStruct{
+			Id:      qdrant.NewIDNum(uint64(n.ID)),
+			Vectors: qdrant.NewVectors(emb...),
+		}
 
-	for _, point := range points {
 		_, err = client.Upsert(ctx, &qdrant.UpsertPoints{
 			CollectionName: "news",
 			Points:         []*qdrant.PointStruct{point},
 		})
 		if err != nil {
-			logger.Error("Ошибка загрузки в Qdrant (ID=%d): %v", point.Id.GetNum(), err)
+			logger.Error("ID=%d: ошибка загрузки в Qdrant: %v", n.ID, err)
 			continue
 		}
 
@@ -135,7 +119,7 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 			ScoreThreshold: qdrant.PtrOf(float32(0.79)),
 		})
 		if err != nil {
-			logger.Error("Ошибка поиска дубликатов (ID=%d): %v", point.Id.GetNum(), err)
+			logger.Error("ID=%d: ошибка поиска дубликатов: %v", n.ID, err)
 			continue
 		}
 
@@ -145,14 +129,14 @@ func CronDeduplicateTask(db *gorm.DB, client *qdrant.Client, ctx context.Context
 			}
 			added, err := addDuplicate(db, uint(simPoint.Id.GetNum()), uint(point.Id.GetNum()))
 			if err != nil {
-				logger.Error("Ошибка записи дубликата: %v", err)
+				logger.Error("Ошибка записи дубликата ID=%d <-> ID=%d: %v", point.Id.GetNum(), simPoint.Id.GetNum(), err)
 			} else if added {
 				logger.Info("Дубликат: ID=%d <-> ID=%d (score=%.2f)", point.Id.GetNum(), simPoint.Id.GetNum(), simPoint.Score)
 			}
 		}
 
 		now := time.Now()
-		db.Model(&models.News{}).Where("id = ?", point.Id.GetNum()).Update("deduplication_checked_at", now)
+		db.Model(&models.News{}).Where("id = ?", n.ID).Update("deduplication_checked_at", now)
 	}
 
 	logger.Done("Дедупликация")

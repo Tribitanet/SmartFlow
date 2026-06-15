@@ -78,7 +78,7 @@ func (h *Handler) addUserStopTheme(c *gin.Context) {
 }
 
 // @Summary Remove stop theme from user
-// @Description Removes a stop theme from the authenticated user's filter list. Deletes it if no other users use it.
+// @Description Removes a stop theme from the authenticated user's filter list. The stop theme itself is kept in the database.
 // @Tags user-stop-themes
 // @Produce json
 // @Param stopThemeId path string true "StopTheme ID"
@@ -100,19 +100,9 @@ func (h *Handler) removeUserStopTheme(c *gin.Context) {
 		return
 	}
 
+	// Отвязываем тему только от пользователя; саму тему из БД не удаляем
 	if err := h.DB.Model(&user).Association("StopThemes").Delete(&stopTheme); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	var usersCount int64
-	h.DB.Table("user_stop_themes").Where("stop_theme_id = ?", stopTheme.ID).Count(&usersCount)
-	if usersCount == 0 {
-		if err := h.DB.Delete(&stopTheme).Error; err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		c.JSON(http.StatusOK, gin.H{"message": "Stop theme removed from user and deleted"})
 		return
 	}
 
