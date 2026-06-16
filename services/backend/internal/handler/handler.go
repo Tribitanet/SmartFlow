@@ -38,14 +38,14 @@ func (h *Handler) InitRoutes() *gin.Engine {
 	router.GET("/addfeed", h.addfeedPage)
 	router.GET("/login", h.authPage)
 
-	// === Публичные маршруты (без авторизации) ===
+	// Публичные маршруты 
 	auth := router.Group("/auth")
 	{
 		auth.POST("/register", h.createUser)
 		auth.POST("/login", h.loginUser)
 	}
 
-	// === Защищённые маршруты (auth middleware) ===
+	// Защищённые маршруты
 	users := router.Group("/users")
 	users.Use(AuthMiddleware())
 	{
@@ -81,12 +81,6 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		users.GET("/news/saved", h.getSavedNews)
 		users.POST("/news/:newsId/save", h.saveNews)
 		users.DELETE("/news/:newsId/save", h.unsaveNews)
-	}
-
-	// Только чтение — запись делает крон через GORM напрямую
-	news := router.Group("/news")
-	{
-		news.GET("", h.getAllNews)
 	}
 
 	router.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))

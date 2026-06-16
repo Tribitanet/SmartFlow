@@ -57,7 +57,7 @@ func (h *Handler) addUserChannel(c *gin.Context) {
 		return
 	}
 	
-	// Ищем канал по ссылке, если не найден — создаём
+	// Ищем канал по ссылке, нету - создаём
 	var channel models.Channel
 	result := h.DB.Where("link = ?", input.Link).First(&channel)
 	if result.Error != nil {
@@ -104,7 +104,7 @@ func (h *Handler) removeUserChannel(c *gin.Context) {
 		return
 	}
 
-	// Если больше ни один пользователь не подписан — удаляем канал
+	// Уддвляем если больше ни один пользователь не подписан
 	usersCount := h.DB.Model(&channel).Association("Users").Count()
 	if usersCount == 0 {
 		if err := h.DB.Delete(&channel).Error; err != nil {
